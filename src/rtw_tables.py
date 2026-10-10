@@ -1,4 +1,4 @@
-"""Format the aggregated CSV outputs into Markdown tables for the manuscript and supplement."""
+"""Format aggregated CSV outputs as Markdown tables (revision v2) and derive key numbers quoted in the text."""
 from __future__ import annotations
 
 import os
@@ -9,14 +9,24 @@ import pandas as pd
 
 from rtw_config import VAR_LABELS
 
-NAMES = {"Persistence": "Persistence model", "LR-5": "5-variable LR", "LR": "Logistic regression",
-         "EN": "Elastic net", "RF": "Random forest", "XGB": "XGBoost", "LGBM": "LightGBM"}
-NAMES_B = dict(NAMES, **{"Persistence": "Null model (dev. prevalence)", "LR-5": "4-variable LR"})
-ORDER = ["Persistence", "LR-5", "LR", "EN", "RF", "XGB", "LGBM"]
+SHORT = {"Null": "Null", "Status": "Status-only LR", "LR-small": "Parsimonious LR", "LR": "LR (scores)",
+         "RidgeOH": "Ridge-OH", "RF": "Random forest", "XGB": "XGBoost", "LGBM": "LightGBM", "CatBoost": "CatBoost",
+         "EBM": "EBM"}
+ORDER = ["Null", "Status", "LR-small", "LR", "RidgeOH", "RF", "XGB", "LGBM", "CatBoost", "EBM"]
+TASKS = ("A1", "A2", "P")
 
 
-def _f(x, d):
+def T(out, name):
+    return pd.read_csv(os.path.join(out, "tables", name))
+
+
+def f(x, d=3):
+    if pd.isna(x):
+        return "–"
     s = f"{x:.{d}f}"
+    while float(s) == 0 and x != 0 and d < 6:
+        d += 1
+        s = f"{x:.{d}f}"
     return s[1:] if s.startswith("-") and float(s) == 0 else s
 
 
@@ -24,381 +34,204 @@ def ci(e, lo, hi, d=3):
     if pd.isna(e):
         return "–"
     if pd.isna(lo):
-        return _f(e, d)
-    return f"{_f(e, d)} ({_f(lo, d)}, {_f(hi, d)})"
+        return f(e, d)
+    return f"{f(e, d)} ({f(lo, d)}, {f(hi, d)})"
 
 
 def md(df):
     cols = list(df.columns)
     out = ["| " + " | ".join(cols) + " |", "|" + "|".join(["---"] * len(cols)) + "|"]
     for _, r in df.iterrows():
-        out.append("| " + " | ".join(str(r[c]) for c in cols) + " |")
+        out.append("| " + " | ".join(str(r[c]).replace("|", "/") for c in cols) + " |")
     return "\n".join(out)
 
 
-def T(out, name):
-    return pd.read_csv(os.path.join(out, "tables", name))
+def primary(out, task):
+    t = T(out, "tuning_primary.csv")
+    t = t[t.task == task]
+    return t.loc[t.repeated_cv_logloss.idxmin(), "model"]
 
 
 def table1(out):
     t = T(out, "table1_characteristics.csv")
     rows = []
     for _, r in t.iterrows():
-        row = {"Characteristic": r["characteristic"]}
+        row = {"Characteristic": r.characteristic}
         for c in (1, 2, 3):
             u, w = r[f"C{c}_unw"], r.get(f"C{c}_w", np.nan)
-            if r["kind"] == "pct":
-                row[f"C{c}"] = f"{float(u):.1f} ({float(w):.1f})"
-            elif r["kind"] == "mean":
-                row[f"C{c}"] = f"{float(u):.2f} ± {float(r[f'C{c}_sd']):.2f} ({float(w):.2f})"
-            elif r["kind"] == "acc":
-                row[f"C{c}"] = f"{float(u):.3f}"
-            elif "Re-entry" in r["characteristic"]:
-                row[f"C{c}"] = f"{u} [{float(w):.1f}]"
+            if r.kind == "n":
+                row[f"C{c}"] = f"{int(u):,}"
+            elif r.kind == "pct_only":
+                row[f"C{c}"] = f"{u:.1f}"
+            elif r.kind == "mean":
+                row[f"C{c}"] = f"{u:.2f} ({w:.2f})"
             else:
-                row[f"C{c}"] = str(u)
-        rows.append(row)
-    return md(pd.DataFrame(rows).rename(columns={"C1": "Cohort 1 (2013-14)", "C2": "Cohort 2 (2018-19)",
-                                                 "C3": "Cohort 3 (2023-24)"}))
-
-
-def perf_table(out, task, metrics=("AUROC", "AUPRC", "Brier", "sBrier", "CITL", "Slope", "ECE", "Accuracy")):
-    t = T(out, f"perf_C3_task{task}.csv")
-    dev = T(out, f"perf_devOOF_task{task}.csv").set_index("model")
-    names = NAMES if task == "A" else NAMES_B
-    rows = []
-    for m in ORDER:
-        d = t[t.model == m].set_index("metric")
-        if len(d) == 0:
-            continue
-        r = {"Model": names[m], "Dev. AUROC (OOF)": f"{dev.loc[m, 'AUROC']:.3f}"}
-        for k in metrics:
-            dd = 3
-            r[k] = ci(d.loc[k, "estimate"], d.loc[k, "lo"], d.loc[k, "hi"], dd) if not (
-                task == "B" and m == "Persistence" and k in ("Slope", "AUROC", "AUPRC")) else "–"
-        rows.append(r)
-    return md(pd.DataFrame(rows))
-
-
-def perf_compact(out):
-    """Main-text Table 2: both tasks, key metrics."""
-    rows = []
-    for task in ("A", "B"):
-        t = T(out, f"perf_C3_task{task}.csv")
-        dev = T(out, f"perf_devOOF_task{task}.csv").set_index("model")
-        names = NAMES if task == "A" else NAMES_B
-        for m in ORDER:
-            d = t[t.model == m].set_index("metric")
-            null = task == "B" and m == "Persistence"
-            rows.append({"Task": task, "Model": names[m],
-                         "AUROC dev (OOF)": "–" if null else f"{dev.loc[m, 'AUROC']:.3f}",
-                         "AUROC C3": "–" if null else ci(d.loc["AUROC", "estimate"], d.loc["AUROC", "lo"], d.loc["AUROC", "hi"]),
-                         "AUPRC": "–" if null else f"{d.loc['AUPRC', 'estimate']:.3f}",
-                         "Brier": f"{d.loc['Brier', 'estimate']:.3f}",
-                         "CITL": ci(d.loc["CITL", "estimate"], d.loc["CITL", "lo"], d.loc["CITL", "hi"], 2),
-                         "Slope": "–" if null else ci(d.loc["Slope", "estimate"], d.loc["Slope", "lo"], d.loc["Slope", "hi"], 2),
-                         "ECE": f"{d.loc['ECE', 'estimate']:.3f}",
-                         "Accuracy": f"{d.loc['Accuracy', 'estimate']:.3f}"})
-    return md(pd.DataFrame(rows))
-
-
-def table1_compact(out):
-    """Main-text Table 1 (selected rows)."""
-    t = T(out, "table1_characteristics.csv").set_index("characteristic")
-    keep = ["Wave-1 participants, n", "Analysed (participated at wave 2), n (%)", "Female", "Age >=60",
-            "College or higher education", "Occupational disease", "Commuting injury", "Disability grade 1-7 (severe)",
-            "No disability grade", "Vocational rehabilitation service", "Regular job at injury", "Employed at wave 1",
-            "Work ability, mean (0-10)", "High pain interference", "Physical limitation (walk/stairs/lift)",
-            "Chronic disease", "Employed at wave 2 (Task A outcome)",
-            "Re-entry among non-employed at wave 1 (Task B), events/n (%)",
-            "Persistence accuracy (wave-2 status = wave-1 status)"]
-    rows = []
-    for k in keep:
-        r = t.loc[k]
-        row = {"Characteristic": k.replace(" (Task A outcome)", " (Task A)")}
-        for c in (1, 2, 3):
-            u, w = r[f"C{c}_unw"], r.get(f"C{c}_w", np.nan)
-            if r["kind"] == "pct":
-                row[f"C{c}"] = f"{float(u):.1f} ({float(w):.1f})"
-            elif r["kind"] == "mean":
-                row[f"C{c}"] = f"{float(u):.2f} ({float(w):.2f})"
-            elif r["kind"] == "acc":
-                row[f"C{c}"] = f"{float(u):.3f}"
-            elif "Re-entry" in k:
-                row[f"C{c}"] = f"{u} [{float(w):.1f}]"
-            else:
-                row[f"C{c}"] = str(u)
+                row[f"C{c}"] = f"{u:.1f} ({w:.1f})"
         rows.append(row)
     return md(pd.DataFrame(rows).rename(columns={"C1": "Cohort 1", "C2": "Cohort 2", "C3": "Cohort 3"}))
 
 
-def shift_main(out):
-    """Main-text Table 3: covariate-shift attribution for the primary model and LR (Task A and B)."""
+def table2(out, models_per_task=None):
     rows = []
-    for task in ("A", "B"):
-        t = T(out, f"shift_importance_weighting_task{task}.csv")
-        for m in ("XGB", "LR"):
-            for k in ("AUROC", "CITL"):
-                r = t[(t.model == m) & (t.metric == k)].iloc[0]
-                rows.append({"Task": task, "Model": NAMES[m], "Metric": k, "Dev. OOF": f"{r.dev_oof:.3f}",
-                             "Dev. re-weighted": f"{r.dev_oof_weighted:.3f}", "C3": f"{r.C3:.3f}",
-                             "Total change": ci(r.total_change, r.total_lo, r.total_hi),
-                             "Covariate shift": ci(r.covariate_part, r.cov_lo, r.cov_hi),
-                             "Residual": ci(r.residual_part, r.res_lo, r.res_hi)})
-    return md(pd.DataFrame(rows))
-
-
-def diffs_table(out, task):
-    t = T(out, f"perf_C3_diffs_task{task}.csv")
-    names = NAMES if task == "A" else NAMES_B
-    rows = []
-    for ref in ("Persistence", "LR-5", "LR"):
-        for m in ORDER:
-            d = t[(t.model == m) & (t.reference == ref)].set_index("metric")
-            if len(d) == 0:
+    for task in TASKS:
+        u = T(out, f"perf_C3_{task}_unweighted.csv")
+        w = T(out, f"perf_C3_{task}_weighted.csv")
+        prim = primary(out, task)
+        base = ["Status", "LR-small"] if task == "P" else ["Null", "LR-small"]
+        models = list(dict.fromkeys(base + ["LR", "RidgeOH", prim]))
+        for m in models:
+            gu = u[u.model == m].set_index("metric")
+            gw = w[w.model == m].set_index("metric")
+            if len(gu) == 0:
                 continue
-            rows.append({"Model": names[m], "Reference": names[ref],
-                         "ΔAUROC": ci(d.loc["AUROC", "estimate"], d.loc["AUROC", "lo"], d.loc["AUROC", "hi"]),
-                         "ΔBrier": ci(d.loc["Brier", "estimate"], d.loc["Brier", "lo"], d.loc["Brier", "hi"], 4),
-                         "ΔAccuracy": ci(d.loc["Accuracy", "estimate"], d.loc["Accuracy", "lo"], d.loc["Accuracy", "hi"])})
+            nul = m == "Null"
+            rows.append({"Task": task, "Model": SHORT[m] + (" *" if m == prim else ""),
+                         "AUROC (sample)": "–" if nul else ci(*gu.loc["AUROC", ["estimate", "lo", "hi"]]),
+                         "AUROC (population)": "–" if nul else ci(*gw.loc["AUROC", ["estimate", "lo", "hi"]]),
+                         "CITL (sample)": ci(*gu.loc["CITL", ["estimate", "lo", "hi"]], d=2),
+                         "Slope (sample)": "–" if nul else ci(*gu.loc["Slope", ["estimate", "lo", "hi"]], d=2),
+                         "CITL (pop.)": ci(*gw.loc["CITL", ["estimate", "lo", "hi"]], d=2),
+                         "Slope (pop.)": "–" if nul else ci(*gw.loc["Slope", ["estimate", "lo", "hi"]], d=2),
+                         "ICI (sample)": "–" if nul else f(gu.loc["ICI", "estimate"])})
     return md(pd.DataFrame(rows))
 
 
-def shift_table(out):
-    adv = T(out, "shift_adversarial.csv")
-    tr = T(out, "shift_transitions.csv")
+def table3(out):
+    dis = T(out, "shift_disde.csv")
+    iw = T(out, "update_iw_recalibration.csv")
     rows = []
-    for _, r in adv.iterrows():
-        rows.append({"Quantity": f"Adversarial AUROC, {r.contrast}", "Value": ci(r.AUROC, r.lo, r.hi)})
-    for c in (1, 2, 3):
-        for e, lab in (("1", "employed"), ("0", "not employed")):
-            r = tr[(tr.cohort == c) & (tr.employed_w1.astype(str) == e)].iloc[0]
-            rows.append({"Quantity": f"C{c}: P(employed w2 | {lab} w1)",
-                         "Value": f"{r.p:.3f} ({r.lo:.3f}, {r.hi:.3f}); {int(r.k)}/{int(r.n)}"})
-    for task in ("A", "B"):
-        i = T(out, f"shift_iw_info_task{task}.csv").iloc[0]
-        rows.append({"Quantity": f"Task {task}: outcome prevalence dev / dev re-weighted to C3 covariates / C3",
-                     "Value": f"{i.dev_prevalence:.3f} / {i.dev_prevalence_weighted:.3f} / {i.C3_prevalence:.3f}"})
-        rows.append({"Quantity": f"Task {task}: domain-classifier AUROC (LR, cross-fitted); ESS of weights",
-                     "Value": f"{i.domain_auroc_LR_crossfit:.3f}; {i.ESS:.0f} of {int(i.n_dev)}"})
-    return md(pd.DataFrame(rows))
-
-
-def iw_table(out, task, models=("Persistence", "LR-5", "LR", "XGB")):
-    t = T(out, f"shift_importance_weighting_task{task}.csv")
-    rows = []
-    for m in models:
-        for k in ("AUROC", "Brier", "CITL", "Slope"):
-            r = t[(t.model == m) & (t.metric == k)]
-            if len(r) == 0:
+    for task in ("A1", "A2", "P"):
+        prim = primary(out, task)
+        for des in ("C1 -> C3", "C2 -> C3", "C1+C2 -> C3"):
+            pv = dis[(dis.task == task) & (dis.design == des) & (dis.metric == "Prevalence")].set_index("component")
+            m = prim if ((dis.task == task) & (dis.design == des) & (dis.model == prim)).any() else "XGB"
+            cl = dis[(dis.task == task) & (dis.design == des) & (dis.metric == "CITL") & (dis.model == m)].set_index("component")
+            ir = iw[(iw.task == task) & (iw.design == des) & (iw.model == m)]
+            def g(meth, k):
+                r = ir[(ir.method == meth) & (ir.metric == k)]
+                return r.iloc[0].estimate if len(r) else np.nan
+            if len(pv) == 0:
                 continue
-            r = r.iloc[0]
-            dd = 4 if k == "Brier" else 3
-            rows.append({"Model": (NAMES if task == "A" else NAMES_B)[m], "Metric": k,
-                         "Dev. OOF": f"{r.dev_oof:.{dd}f}", "Dev. re-weighted": f"{r.dev_oof_weighted:.{dd}f}",
-                         "C3 observed": f"{r.C3:.{dd}f}",
-                         "Total change": ci(r.total_change, r.total_lo, r.total_hi, dd),
-                         "Covariate-shift part": ci(r.covariate_part, r.cov_lo, r.cov_hi, dd),
-                         "Residual part": ci(r.residual_part, r.res_lo, r.res_hi, dd)})
-    return md(pd.DataFrame(rows))
-
-
-def feature_shift_table(out, n=None):
-    t = T(out, "shift_features.csv")
-    if n:
-        t = t.head(n)
-    t = t.assign(Variable=t.variable.map(VAR_LABELS))
-    return md(pd.DataFrame({"Variable": t.Variable, "SMD dev vs C3": t.SMD_dev_vs_C3.round(3),
-                            "PSI dev vs C3": t.PSI_dev_vs_C3.round(3), "SMD C1 vs C2": t.SMD_C1_vs_C2.round(3),
-                            "PSI C1 vs C2": t.PSI_C1_vs_C2.round(3)}))
-
-
-def updating_table(out, task):
-    s = updating_robust(out, task)
-    rows = []
-    for _, d in s.iterrows():
-        rows.append({"Method": d.method, "n": int(d.n),
-                     **{k: ci(d[f"{k}_median"], d[f"{k}_p2_5"], d[f"{k}_p97_5"], 4 if k == "Brier" else 3)
-                        for k in ("AUROC", "Brier", "CITL", "Slope")},
-                     "Mean abs. CITL": f"{d.mean_abs_CITL:.3f}", "Median abs. (slope - 1)": f"{d.mean_abs_slope_minus1:.3f}",
-                     "Reps with smaller abs. CITL than no update": f"{100 * d.share_better_abs_CITL:.0f}%",
-                     "Reps with lower Brier than no update": f"{100 * d.share_better_Brier:.0f}%"})
-    order = ["No update", "Intercept recalibration", "Logistic recalibration", "Refit on C3 sample",
-             "Pooled refit (dev + C3 sample)"]
+            rows.append({"Task": task, "Design": des.replace(" -> ", " → "), "Model": SHORT[m],
+                         "Δ prevalence": ci(*pv.loc["total", ["estimate", "lo", "hi"]]),
+                         "yx_prev": ci(*pv.loc["YgivenX_shift", ["estimate", "lo", "hi"]]),
+                         "CITL in C3": f(cl.loc["total", "target_value"], 2),
+                         "yx_citl": ci(*cl.loc["YgivenX_shift", ["estimate", "lo", "hi"]], d=2),
+                         "Slope: none → IW recal.": f"{f(g('No update', 'Slope'), 2)} → {f(g('IW logistic recalibration', 'Slope'), 2)}",
+                         "CITL: none → IW recal.": f"{f(g('No update', 'CITL'), 2)} → {f(g('IW logistic recalibration', 'CITL'), 2)}"})
     df = pd.DataFrame(rows)
-    df["o"] = df.Method.map({m: i for i, m in enumerate(order)})
-    return md(df.sort_values(["o", "n"]).drop(columns="o"))
+    df.columns = ["Task", "Design", "Model", "Δ employment prevalence", "Y|X component (prev.)", "CITL in C3",
+                  "Y|X component (CITL)", "Slope: none → IW", "CITL: none → IW"]
+    return md(df)
 
 
-def fairness_table(out, task, pt, model=None):
-    t = T(out, f"fairness_task{task}_pt{pt}.csv")
-    if model:
-        t = t[t.model == model]
+def perf_full(out, task, lab):
+    u = T(out, f"perf_C3_{task}_{lab}.csv")
+    dev = T(out, f"perf_devOOF_{task}.csv").set_index("model")
     rows = []
-    for _, r in t.iterrows():
-        rows.append({"Model": r.model, "Group": r.group, "Level": r.level, "n": int(r.n),
-                     "Observed": f"{r.prevalence:.3f}", "O/E": f"{r.OE:.3f}",
-                     "AUROC": ci(r.AUROC, r.AUROC_lo, r.AUROC_hi), "CITL": ci(r.CITL, r.CITL_lo, r.CITL_hi),
-                     "TPR": ci(r.TPR, r.TPR_lo, r.TPR_hi), "FPR": ci(r.FPR, r.FPR_lo, r.FPR_hi),
-                     "ΔTPR vs ref": "ref" if r.level == r.reference else ci(r.gap_TPR, r.gap_TPR_lo, r.gap_TPR_hi),
-                     "ΔFPR vs ref": "ref" if r.level == r.reference else ci(r.gap_FPR, r.gap_FPR_lo, r.gap_FPR_hi),
-                     "Dev ΔTPR": "" if r.level == r.reference else f"{r.dev_gap_TPR:.3f}"})
+    for m in ORDER:
+        g = u[u.model == m].set_index("metric")
+        if len(g) == 0:
+            continue
+        rows.append({"Model": SHORT[m], "Dev AUROC (OOF)": f(dev.loc[m, "AUROC"]) if m in dev.index else "–",
+                     **{k: ci(*g.loc[k, ["estimate", "lo", "hi"]], d=4 if k in ("Brier", "LogLoss") else 3)
+                        for k in ("AUROC", "AUPRC", "Brier", "LogLoss", "CITL", "Slope", "ICI", "E50", "E90", "ECE")},
+                     "No-skill AUPRC": f(g.loc["NoSkillAUPRC", "estimate"]),
+                     "Slope undefined (boot)": int(g.loc["Slope", "n_undefined"])})
     return md(pd.DataFrame(rows))
 
 
-def sens_table(out, task):
-    t = T(out, f"sensitivity_task{task}.csv")
-    rows = []
-    for (a, m), d in t.groupby(["analysis", "model"], sort=False):
-        d = d.set_index("metric")
-        rows.append({"Analysis": a, "Model": NAMES.get(m, m), "n": int(d["n"].iloc[0]),
-                     **{k: ci(d.loc[k, "estimate"], d.loc[k, "lo"], d.loc[k, "hi"], 4 if k == "Brier" else 3)
-                        for k in ("AUROC", "Brier", "CITL", "Slope")}})
+def diffs(out, task, lab):
+    d = T(out, f"perf_C3_diffs_{task}_{lab}.csv")
+    d = d[d.metric.isin(["AUROC", "Brier", "ICI"])]
+    rows = [{"Model": SHORT[r.model], "Reference": SHORT[r.reference], "Metric": r.metric,
+             "Difference": ci(r.estimate, r.lo, r.hi, 4)} for _, r in d.iterrows()]
     return md(pd.DataFrame(rows))
 
 
-def secondary_table(out, task):
-    t = T(out, "secondary_designs.csv")
-    t = t[t.task == task]
-    rows = []
-    for (a, m), d in t.groupby(["analysis", "model"], sort=False):
-        d = d.set_index("metric")
-        rows.append({"Design": a, "Model": (NAMES if task == "A" else NAMES_B).get(m, m),
-                     "n test (events)": f"{int(d['n'].iloc[0])} ({int(d['events'].iloc[0])})",
-                     **{k: ci(d.loc[k, "estimate"], d.loc[k, "lo"], d.loc[k, "hi"], 4 if k == "Brier" else 3)
-                        for k in ("AUROC", "Brier", "CITL", "Slope")},
-                     "Lowest CV log-loss": d["primary_in_design"].iloc[0]})
-    return md(pd.DataFrame(rows))
-
-
-def tuning_table(out):
-    t = T(out, "tuning_primary.csv")
-    return md(t.assign(cv_logloss=t.cv_logloss.round(4)))
-
-
-def shap_table(out, task):
-    t = pd.read_csv(os.path.join(out, "tables", f"shap_importance_task{task}.csv"), index_col=0)
-    cols = ["dev_model_on_dev", "dev_model_on_C3", "C3_refit_on_C3", "C1_only", "C2_only", "C3_only"]
-    t = t[["label"] + cols].round(3)
-    return md(t.reset_index(drop=True))
-
-
-def dca_delta_table(out):
-    rows = []
-    for task in ("A", "B"):
-        t = T(out, f"dca_delta_task{task}.csv")
-        for _, r in t.iterrows():
-            rows.append({"Task": task, "Model": r.model, "Reference": r.reference, "Threshold": r.threshold,
-                         "ΔNet benefit": ci(r.delta_nb, r.lo, r.hi, 4)})
-    return md(pd.DataFrame(rows))
-
-
-CODING = {
-    "female": "1 = female", "edu": "1 none ... 5 college or higher", "married": "1 = currently married",
-    "hh_size": "persons (truncated at 6)", "disease": "1 = occupational disease (administrative)",
-    "commuting": "1 = commuting injury (covered from 2018)", "care_dur": "1 <=3 m ... 6 >2 y",
-    "tenure": "14 classes, 1 <1 m ... 14 >=20 y", "svc_any": "1 = any rehabilitation service (admin.)",
-    "svc_job": "1 = vocational rehabilitation service (admin.)", "firm_size": "1 <5 ... 6 >=300 employees",
-    "union": "1 = union at injured workplace", "ex_days": "days/week 0-7", "regular_ex": ">=3 days and >=30 min/day",
-    "work_ability": "0 (lost) - 10 (full); C1 wave 1 refers to ~90 days after care",
-    "work_ability_postcare": "0-10, recalled for end of care", "chronic": "1 = current chronic disease",
-    "phys_limitation": "1 = substantial limitation walking/stairs/lifting", "sensory_impair": "1 = vision/hearing/speech impairment",
-    "adl_help": "1 none ... 4 much help needed", "adl_mental": "1 none ... 5 very difficult",
-    "adl_indoor": "1 none ... 5 very difficult", "adl_outdoor": "1 none ... 5 very difficult",
-    "adl_work": "1 none ... 5 very difficult", "pain_freq": "1 never ... 5 always", "pain_interf": "1 not at all ... 4 always",
-    "smoker": "1 = current smoker", "drinker": "1 = current drinker", "age_grp": "<=39, 40-49, 50-59, >=60",
-    "job_status": "regular, temporary, daily, self-employed", "industry": "construction, manufacturing, transport, other",
-    "disab_cat": "grade 1-3, 4-7, 8-9, 10-12, 13-14, none", "employed": "1 = employed at wave 1 (emp3 = 1)",
-    "emp6": "new employer / self-employed or unpaid family (if employed); job-seeking (if not employed)",
-}
-
-
-def predictor_md(out):
-    t = T(out, "tableS1_predictors.csv")
-    t.insert(2, "coding", t.variable.map(CODING))
+def generic(out, name, cols=None, d=3):
+    t = T(out, name)
+    if cols:
+        t = t[cols]
+    for c in t.columns:
+        if pd.api.types.is_float_dtype(t[c]):
+            t[c] = t[c].map(lambda x: f(x, d))
     return md(t)
 
 
 def key_numbers(out):
-    """Derived scalar quantities quoted in the text (written to tables/key_numbers.csv)."""
     rows = []
     t1 = T(out, "table1_characteristics.csv").set_index("characteristic")
-    r = t1.loc["Analysed (participated at wave 2), n (%)"]
     for c in (1, 2, 3):
-        rows.append(("response_pct_C%d" % c, float(str(r[f"C{c}_unw"]).split("(")[1].rstrip(")")),
-                     "table1_characteristics.csv: Analysed row"))
-    for task, ref in (("A", "Persistence rule"), ("B", "Treat all")):
-        d = T(out, f"dca_task{task}.csv").pivot(index="threshold", columns="strategy", values="net_benefit")
-        diff = d["XGB"] - d[ref]
-        close = diff[diff.abs() < 0.01].index.values
-        rows.append((f"dca{task}_xgb_minus_ref_min", float(diff.min()), f"dca_task{task}.csv"))
-        rows.append((f"dca{task}_xgb_minus_ref_max", float(diff.max()), f"dca_task{task}.csv"))
-        if len(close):
-            rows.append((f"dca{task}_close_lo", float(close.min()), f"dca_task{task}.csv: |NB(XGB)-NB({ref})|<0.01"))
-            rows.append((f"dca{task}_close_hi", float(close.max()), f"dca_task{task}.csv: |NB(XGB)-NB({ref})|<0.01"))
-            rows.append((f"dca{task}_close_n", float(len(close)), f"dca_task{task}.csv"))
-        above = diff[diff >= 0.01].index.values
-        # smallest threshold from which XGB exceeds the reference by >= 0.01 at every higher threshold
-        thr = sorted(d.index.values)
-        first = None
-        for i_, tv in enumerate(thr):
-            if all(diff.loc[x] >= 0.01 for x in thr[i_:]):
-                first = tv
-                break
-        if first is not None:
-            rows.append((f"dca{task}_xgb_better_from", float(first), f"dca_task{task}.csv: NB(XGB)-NB({ref})>=0.01 thereafter"))
-        mta = (d["XGB"] - d["Treat all"]).min()
-        rows.append((f"dca{task}_xgb_minus_treatall_min", float(mta), f"dca_task{task}.csv"))
+        rows.append((f"response_pct_C{c}", t1.loc["Wave-2 response, %", f"C{c}_unw"], "table1_characteristics.csv"))
+    for task in TASKS:
+        prim = primary(out, task)
+        rows.append((f"primary_is_{task}_{prim}", 1, "tuning_primary.csv"))
+        for lab in ("unweighted", "weighted"):
+            dd = T(out, f"dca_delta_{task}_{lab}.csv")
+            for _, r in dd.iterrows():
+                rows.append((f"dca_{task}_{lab}_{r.model}_pt{r.threshold:.2f}", r.delta_vs_best_default, f"dca_delta_{task}_{lab}.csv"))
     k = pd.DataFrame(rows, columns=["name", "value", "source"])
     k.to_csv(os.path.join(out, "tables", "key_numbers.csv"), index=False)
     return k
 
 
-def updating_robust(out, task):
-    """Median/percentile summary and absolute calibration error per repetition (paired with no update)."""
-    r = T(out, f"updating_reps_task{task}.csv")
-    base = r[r.method == "No update"].set_index("rep")
-    rows = []
-    for (meth, n), d in r.groupby(["method", "n"], sort=False):
-        d = d.set_index("rep")
-        b = base.reindex(d.index)
-        row = {"task": task, "method": meth, "n": int(n), "reps": len(d)}
-        for k in ("AUROC", "Brier", "CITL", "Slope", "ECE"):
-            row[f"{k}_median"] = d[k].median()
-            row[f"{k}_p2_5"] = d[k].quantile(0.025)
-            row[f"{k}_p97_5"] = d[k].quantile(0.975)
-        row["mean_abs_CITL"] = d["CITL"].abs().mean()
-        row["mean_abs_slope_minus1"] = (d["Slope"] - 1).abs().median()  # median: robust to degenerate refits
-        row["share_better_abs_CITL"] = float(np.mean(d["CITL"].abs() < b["CITL"].abs()))
-        row["share_better_abs_slope"] = float(np.mean((d["Slope"] - 1).abs() < (b["Slope"] - 1).abs()))
-        row["share_better_Brier"] = float(np.mean(d["Brier"] < b["Brier"]))
-        rows.append(row)
-    u = pd.DataFrame(rows)
-    u.to_csv(os.path.join(out, "tables", f"updating_robust_task{task}.csv"), index=False)
-    return u
-
-
 def make_all(out):
-    for task in ("A", "B"):
-        updating_robust(out, task)
     key_numbers(out)
-    parts = {
-        "Main Table 1": table1_compact(out), "Main Table 2": perf_compact(out), "Main Table 3": shift_main(out),
-        "Predictors": predictor_md(out),
-        "Table 1": table1(out), "Table 2A": perf_table(out, "A"), "Table 2B": perf_table(out, "B"),
-        "Paired differences A": diffs_table(out, "A"), "Paired differences B": diffs_table(out, "B"),
-        "Shift summary": shift_table(out), "Importance weighting A": iw_table(out, "A"),
-        "Importance weighting B": iw_table(out, "B"), "Feature shift": feature_shift_table(out),
-        "Updating A": updating_table(out, "A"), "Updating B": updating_table(out, "B"),
-        "Fairness A pt30": fairness_table(out, "A", 30), "Fairness A pt50": fairness_table(out, "A", 50),
-        "Fairness B pt60": fairness_table(out, "B", 60), "Sensitivity A": sens_table(out, "A"),
-        "Sensitivity B": sens_table(out, "B"), "Secondary A": secondary_table(out, "A"),
-        "Secondary B": secondary_table(out, "B"), "Tuning": tuning_table(out), "SHAP A": shap_table(out, "A"),
-        "SHAP B": shap_table(out, "B"), "DCA delta": dca_delta_table(out),
-    }
-    with open(os.path.join(out, "tables_formatted.md"), "w", encoding="utf-8") as f:
+    parts = {"Main Table 1": table1(out), "Main Table 2": table2(out), "Main Table 3": table3(out)}
+    for task in TASKS:
+        for lab in ("unweighted", "weighted"):
+            parts[f"Performance {task} {lab}"] = perf_full(out, task, lab)
+            parts[f"Differences {task} {lab}"] = diffs(out, task, lab)
+    parts["Tuning primary"] = generic(out, "tuning_primary.csv", d=4)
+    parts["Tuning secondary"] = generic(out, "tuning_secondary.csv", d=4)
+    parts["Sample size"] = generic(out, "sample_size_riley.csv")
+    parts["Calibration change"] = "\n\n".join(generic(out, f"calibration_change_{t}.csv") for t in TASKS)
+    parts["DCA delta"] = "\n\n".join(generic(out, f"dca_delta_{t}_{lab}.csv", d=4) for t in TASKS
+                                     for lab in ("unweighted", "weighted"))
+    parts["Prevalence"] = generic(out, "shift_prevalence.csv")
+    parts["Cohort effects"] = generic(out, "shift_cohort_effects.csv")
+    parts["Outcome in domain"] = generic(out, "shift_outcome_in_domain_test.csv")
+    parts["Adversarial"] = generic(out, "shift_adversarial.csv")
+    parts["DISDE"] = generic(out, "shift_disde.csv", ["task", "design", "model", "metric", "component", "estimate", "lo", "hi"], d=4)
+    parts["DISDE info"] = generic(out, "shift_disde_info.csv")
+    parts["Case mix"] = generic(out, "shift_casemix.csv")
+    parts["IW sensitivity"] = generic(out, "shift_iw_sensitivity.csv")
+    parts["IW recalibration"] = generic(out, "update_iw_recalibration.csv",
+                                        ["task", "design", "model", "method", "metric", "estimate", "lo", "hi",
+                                         "improvement_vs_none", "imp_lo", "imp_hi"], d=4)
+    lg = T(out, "update_lagged_summary.csv")
+    parts["Lagged updating"] = generic(out, "update_lagged_summary.csv",
+                                       ["task", "model", "method", "n", "reps", "AUROC_median", "Brier_median", "CITL_median",
+                                        "Slope_median", "ICI_median", "ICI_p2_5", "ICI_p97_5", "share_better_ICI",
+                                        "share_better_Brier", "Slope_n_undefined"] +
+                                       [c for c in lg.columns if c.startswith("closed_choice")], d=4)
+    wc = T(out, "update_withinC3_summary.csv")
+    parts["Within-C3 updating"] = generic(out, "update_withinC3_summary.csv",
+                                          ["task", "model", "method", "n", "reps", "AUROC_median", "Brier_median",
+                                           "CITL_median", "Slope_median", "ICI_median", "mean_absCITL",
+                                           "share_better_absCITL", "share_better_slope", "share_better_Brier",
+                                           "Slope_n_undefined"] + [c for c in wc.columns if c.startswith("closed_choice")], d=4)
+    fa = T(out, "fairness.csv")
+    keep = ["task", "model", "weighting", "threshold", "group", "level", "n", "observed", "OE", "AUROC", "CITL", "TPR",
+            "TPR_implied", "FPR", "PPV", "NPV", "gap_TPR", "gap_TPR_lo", "gap_TPR_hi", "gap_TPR_q", "gap_FPR",
+            "gap_FPR_lo", "gap_FPR_hi", "gap_FPR_q", "gap_AUROC", "gap_AUROC_q"]
+    parts["Fairness"] = generic(out, "fairness.csv", [c for c in keep if c in fa.columns])
+    parts["Attribution"] = "\n\n".join(generic(out, f"attribution_{t}.csv") for t in TASKS)
+    parts["Attribution stability"] = "\n\n".join(generic(out, f"attribution_stability_{t}.csv") for t in TASKS)
+    parts["Sensitivity"] = "\n\n".join(generic(out, f"sensitivity_{t}.csv", ["analysis", "model", "metric", "estimate", "lo", "hi", "n"])
+                                       for t in TASKS)
+    sd = [n for n in os.listdir(os.path.join(out, "tables")) if n.startswith("seed_variability_")]
+    parts["Seed variability"] = "\n\n".join(generic(out, n) for n in sorted(sd))
+    parts["Secondary designs"] = generic(out, "secondary_designs.csv",
+                                         ["task", "analysis", "model", "metric", "estimate", "lo", "hi", "n", "events"])
+    parts["Predictors"] = generic(out, "tableS1_predictors.csv")
+    parts["Within strata"] = generic(out, "perf_C3_P_within_strata.csv",
+                                     ["stratum", "weighting", "model", "metric", "estimate", "lo", "hi", "n", "employed_w2"])
+    parts["Attrition"] = generic(out, "attrition.csv", d=1)
+    with open(os.path.join(out, "tables_formatted.md"), "w", encoding="utf-8") as fh:
         for k, v in parts.items():
-            f.write(f"## {k}\n\n{v}\n\n")
+            fh.write(f"## {k}\n\n{v}\n\n")
     return parts
 
 

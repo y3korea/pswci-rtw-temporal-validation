@@ -1,10 +1,23 @@
-# Raw / derived person-level data must never be committed
+# Raw / derived person-level data must never be committed (patterns repeated in upper case because
+# git matching is case-sensitive when core.ignorecase=false, e.g. on Linux clones)
 *.sav
+*.SAV
+*.Sav
 *.dta
+*.DTA
 *.sas7bdat
+*.SAS7BDAT
 *.xlsx
-*.parquet
+*.XLSX
+*.xls
+*.XLS
 *.csv.gz
+*.parquet
+*.PARQUET
+*.por
+*.POR
+*.zip
+*.ZIP
 data/
 rtw_cache/
 cache/

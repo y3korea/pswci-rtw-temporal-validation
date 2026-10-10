@@ -113,8 +113,73 @@ S7. Work-ability reference period (v2 correction: C1 wave-1 work ability refers 
 6. **Secondary-design tuning sizes** were as planned (n_iter 20 XGB/LGBM, 10 RF; EN full grid); S7a used the full primary search.
 No change was made to outcomes, predictors (after amendment v1.1), models, tuning rules, primary-model selection or test metrics after C3 results were seen.
 
+### Amendment v2.0 — 2026-10-10, about 21:00 KST, AFTER an internal pre-submission review using AI-simulated reviewers (all analyses below are post hoc)
+Written before the revised analyses were run; it records the revised design, not results. (Terminology note added about 22:00 KST the same day: the heading originally read "AFTER peer review ... reviewer-driven"; the review was an internal pre-submission review with AI-simulated reviewers, not journal peer review. No substantive change.) Every v2.0 analysis is
+labelled post hoc in the manuscript. The v1 results are archived in `05_results/archive_v1/`.
+* **Task structure.** (A1) job retention: employed at wave 2 among workers employed at wave 1; (A2) re-entry:
+  employed at wave 2 among workers not employed at wave 1 (= former Task B). A1 and A2 are co-primary. The pooled
+  task (former Task A) is secondary and is benchmarked against a status-only logistic model (wave-1 employment plus
+  the nested emp6 indicators). A1 and A2 null benchmark: development prevalence.
+* **Estimands.** Performance in the analysed sample (unweighted) and in the insured target population (weighted by the
+  wave-2 longitudinal weight) are co-primary. Bootstrap CIs in C3 resample within the C3 sampling strata (design-based,
+  1,000 resamples).
+* **Models.** LR (linear scores, as v1), ridge LR with all ordinal predictors one-hot encoded (ridge-OH, C tuned),
+  random forest, XGBoost, LightGBM (widened searches incl. depth-1 trees, design-specific random seeds), CatBoost and an
+  explainable boosting machine (EBM). Elastic net is dropped (superseded by ridge-OH). TabPFN is not run (its model
+  weights require a licensed download that the authors have not approved). Primary model per task = lowest mean
+  log-loss over 2 x 5-fold repeated CV in the development set; ridge-OH is always reported as transparent comparator.
+* **Metrics.** As v1 plus ICI/E50/E90 (spline-based logistic calibration curve), no-skill AUPRC, calibration curves with
+  bootstrap bands; ECE retained in the supplement. Calibration slope is undefined (reported as such) when predictions
+  are (near-)constant or the fit does not converge.
+* **Decision curves.** Event = undesired outcome (A1 job loss, A2 no re-entry, pooled non-employment). Net benefit vs the
+  best default strategy (flag all / flag none / status rule) at p_t = 0.10, 0.20, 0.30, 0.40 (A2 also 0.50, 0.60),
+  unweighted and weighted.
+* **Shift.** Cohort-specific designs C1->C3 and C2->C3 in addition to the pooled design; adversarial validation per
+  cohort pair (full and comparability-restricted predictor sets); conditional cohort effects from a pooled logistic
+  model with cohort indicators; test of whether the outcome improves a domain classifier given x; a DISDE-type
+  decomposition (Cai, Namkoong & Yadlowsky) of the performance change into X-shift (source side), Y|X shift on the
+  shared support and X-shift (target side), with the domain classifier re-estimated inside 200 bootstrap resamples;
+  model-based (case-mix) expected AUROC; importance-weighting truncation sensitivity (95/99/99.9/none), ESS and balance.
+  Terminology: "outcome-prevalence change" (not "label shift") unless P(x|y) invariance is examined.
+* **Updating.** (i) Label-free importance-weighted logistic recalibration (Platt-type, fitted on source OOF
+  predictions weighted by density ratios to the unlabelled target covariates) in pooled, C1->C3, C2->C3 and C1->C2
+  designs; (ii) lagged labelled updating: model developed in C1, updated with random C2 samples (n = 100, 250, 500, 1,000,
+  all), evaluated in C3 (no update, intercept, logistic, closed-testing choice among these, pooled refit, ridge refit on
+  the update sample alone with CV-tuned penalty), 50 repetitions; (iii) the v1 within-C3 split design in the supplement
+  with degenerate fits counted and a CV-tuned ridge refit added.
+* **Fairness (exploratory).** A1 and A2 (and pooled in supplement), primary model and ridge-OH; thresholds = development
+  prevalence of the undesired outcome (A1 0.10, A2 0.60, pooled 0.30); TPR, FPR, FNR, PPV, NPV, AUROC, CITL, O/E;
+  calibration-implied TPR; Benjamini-Hochberg q-values; survey-weighted version.
+* **Sample size.** Riley et al. (2020) development criteria and validation precision for A1, A2, pooled.
+* **Sensitivity.** IPCW, comparability-restricted sets (v1 S4 and S4b = S4 + svc_job + tenure), excluding commuting,
+  work ability removed, weighted training, XGBoost seed variability (20 seeds).
+* **Note on Amendment v1.2.** Its statement that no analysis was changed in response to results cannot be verified externally, because the v1 debug run had already computed cohort-3 results (see Status).
+* **Measurement.** Dependent interviewing of economic activity (D**001000) and of work ability is described; A2 outcome is
+  collected with the independent "last week" questions, A1 outcome with the job-continuation question.
+
+### Amendment v2.1 — 2026-10-11 (written AFTER the v2 results had been seen; descriptive additions and record of deviations)
+* **Added after v2 results were seen (post hoc, descriptive).** (i) Performance of the pooled-task models within wave-1
+  employment strata (`perf_C3_P_within_strata.csv`), so that the pooled AUROC is never reported without the
+  within-stratum values; (ii) a wave-1 to wave-2 attrition table by cohort and wave-1 employment status, with counts of
+  missing longitudinal weights and outcomes among wave-2 respondents (`attrition.csv`; both zero). Both were added
+  after an independent check of the v2 draft, not because of their values.
+* **Deviations of the v2 run from the v2.0 text.** Decision-curve thresholds were implemented per task (A1 0.05, 0.10,
+  0.20, 0.30; A2 0.40, 0.50, 0.60, 0.70; pooled 0.10, 0.20, 0.30, 0.40; `rtw_config.DCA_THRESHOLDS`), centred on the
+  development prevalence of the undesired event. Seed variability was run for the selected primary model (CatBoost in
+  all tasks), not for XGBoost. Fairness for the pooled task is reported in the supplement only.
+* **Run history.** The within-C3 updating stage of the final v2 run failed once (joblib BrokenProcessPool after its
+  temporary memmap folder was removed) and was re-run with a dedicated JOBLIB_TEMP_FOLDER. The run was then paused by
+  the user during the seed-variability stage (2026-10-10, about 22:12 KST); on 2026-10-11 the stages `extras`,
+  `sensitivity` and `report` were re-run from the cached development models. Between the two parts only the new
+  `extras` stage (within-strata, attrition), table formatting and the number-formatting precision were changed; no
+  code used by the earlier stages was modified.
+* **Terminology.** The plan's original title ("Pre-specified analysis plan") is kept as written on 2026-10-10. Because the plan was not time-stamped or registered and a debug run preceded the first full run, the manuscript describes it as "written before outcome modelling, not registered", not as pre-specified.
+* **Primary-model choice.** Unchanged rule (lowest repeated-CV log-loss in the development data). CatBoost was selected
+  in all three tasks with small margins (e.g. A2 0.5819 vs 0.5820 for the EBM); XGBoost gave nearly identical C3
+  results. The manuscript reports this explicitly.
+
 ### Status of pre-specification
-This plan was written (v1.0, about 18:46 KST) before any outcome model was fitted, but it was not time-stamped by an external service, committed to version control, or registered before the analysis; it was first committed to the local git repository after the analysis had been run.
+This plan was written (v1.0, about 18:46 KST) before any outcome model was fitted. A debug run of the full pipeline with reduced resampling (19:01-19:23 KST) computed cohort-3 results before the final v1 run; the code changes made afterwards are listed in Amendment v1.2 and run_log.txt. The plan was not time-stamped by an external service, committed to version control, or registered before the analysis; it was first committed to the local git repository after the analysis had been run.
 
 ## Software / reproducibility
-Python 3, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, shap 0.48.0, statsmodels 0.14.6; seed 2026; n_jobs ≤ 4. Reporting follows TRIPOD+AI (2024).
+Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.10, interpret-core 0.7.8, shap 0.48.0, statsmodels 0.14.6; seed 2026; n_jobs ≤ 4. Reporting follows TRIPOD+AI (2024).

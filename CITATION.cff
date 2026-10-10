@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite the accompanying article."
-title: "Temporal external validation of machine-learning models for predicting employment after occupational injury (PSWCI cohorts 2013-2024): analysis code"
+title: "Temporal validation, shift diagnosis and label-free recalibration of return-to-work prediction models (PSWCI cohorts 2013-2024): analysis code"
 authors:
   - family-names: "[Author 1 family name]"
     given-names: "[Author 1 given name]"
   - family-names: "[Author 2 family name]"
     given-names: "[Author 2 given name]"
-version: "0.1.0"
-date-released: "2026-10-10"
+version: "0.2.0"
+date-released: "2026-10-11"
 license: MIT
 repository-code: "[repository URL — to be inserted]"
