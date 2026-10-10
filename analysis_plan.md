@@ -1,0 +1,114 @@
+# Pre-specified analysis plan — KSCI_P1 Temporal validation of RTW prediction models
+
+Version 1.1 — v1.0 written 2026-10-10 before any outcome model was fitted; v1.1 (same day) incorporates
+the shared-data correction v2 (see "Amendment v1.1" at the end) **before any validation-cohort (C3) prediction
+was computed**.
+Status at the time of writing: the harmonized file was inspected for sample sizes,
+missingness and wave-1 predictor distributions by cohort, and the persistence accuracies /
+re-entry counts given in the brief were reproduced (C1 0.809, C2 0.797, C3 0.832;
+re-entry 261/535, 402/1,130, 357/1,232). No model involving the wave-2 outcome had been fitted.
+Any later deviation will be listed in Section 12 with its reason and reported in the manuscript.
+
+## 1. Data and unit of analysis
+* Source: `00_derived_data/pswci_harmonized_long.parquet` (re-built from raw SPSS files in the Colab notebook by `pswci_harmonize.py`).
+* Unit: wave-1 participants who also participated at wave 2 (C1 n = 1,803; C2 n = 2,965; C3 n = 3,341).
+  Wave 1 = 2013 (C1), 2018 (C2), 2023 (C3); wave 2 = one year later.
+* Development set = C1 + C2 pooled (n = 4,768). Temporal (external) validation set = C3 (n = 3,341). C3 is not used for any modelling decision.
+
+## 2. Outcomes (tasks)
+* **Task A (primary): employment** — employed at wave 2 (`emp3 == 1`), all eligible participants.
+* **Task B (co-primary): re-entry** — employed at wave 2 among those not employed at wave 1
+  (dev: 535 + 1,130 = 1,665, 663 events; C3: 1,232, 357 events).
+* All probabilities are modelled as P(employed at wave 2). For decision-curve and fairness analyses the
+  *intervention target* is the complementary event (Task A: not employed at wave 2; Task B: not re-entered),
+  i.e., a case manager would flag a worker for intensive return-to-work support when the predicted risk
+  of non-employment, 1 − p̂, exceeds a threshold p_t.
+
+## 3. Predictors (wave-1, harmonized, comparable across cohorts)
+female, age_grp, edu, married, hh_size, disease, commuting, care_dur, tenure, disab_cat, svc_any, svc_job,
+firm_size, union, job_status, industry, employed, emp6, ex_days, regular_ex, work_ability,
+work_ability_postcare, chronic, phys_limitation, sensory_impair, adl_help, adl_mental, adl_indoor,
+adl_outdoor, adl_work, pain_freq, pain_interf, smoker, drinker (34 variables; v1.0 listed `limitation`, which
+the v2 data correction showed to be sensory impairment — replaced by the correctly labelled pair).
+Excluded by design: poor_health, fully_recovered, preinj_poor_health (scales not comparable across cohorts).
+
+Encoding (fitted on development data only):
+* Nominal → one-hot with first level as reference: age_grp (ref ≤39), job_status (ref regular), industry (ref construction — alphabetical first), disab_cat (ref grade 1–3, first level).
+* `employed` and `emp6` are collinear (employed ≡ emp6 ∈ {1–4}). They are encoded as **employed_w1 plus three nested indicators**: re-employed with a new employer (emp6 = 2), self-employed/unpaid family worker (emp6 ∈ {3,4}) [reference among employed: original job]; and job-seeking unemployed (emp6 = 5) [reference among non-employed: not in labour force].
+  Task B (all non-employed at wave 1): employed_w1 and the two employed-only indicators are constant and dropped; the job-seeking indicator is kept.
+* All other variables numeric (ordinal scales kept as scores). hh_size truncated at 6.
+* Missing values (only firm_size, union; < 2%): median imputation + missing-indicator columns (indicators are created for variables with missing values in the development data).
+* Standardisation (z-score) for the two logistic models.
+
+## 4. Models
+Candidate models (all use the full predictor set):
+1. LR — unpenalised maximum-likelihood logistic regression.
+2. EN — elastic-net logistic regression (saga), grid: C ∈ 10^{−3…1} (9 values) × l1_ratio ∈ {0.1, 0.5, 0.9, 1.0}.
+3. RF — random forest, 500 trees; random search (n_iter = 20): max_features ∈ {sqrt, 0.2, 0.33, 0.5}, min_samples_leaf ∈ {1, 5, 10, 20, 40}, max_depth ∈ {None, 6, 10, 14}.
+4. XGB — XGBoost; random search (n_iter = 40): n_estimators 100–1000, learning_rate log-uniform 0.01–0.2, max_depth 2–6, min_child_weight 1–20, subsample 0.6–1.0, colsample_bytree 0.5–1.0, reg_lambda log-uniform 0.1–20.
+5. LGBM — LightGBM; random search (n_iter = 40): n_estimators 100–1000, learning_rate 0.01–0.2, num_leaves 4–48, min_child_samples 10–120, subsample 0.6–1.0 (bagging_freq 1), colsample_bytree 0.5–1.0, reg_lambda 0–20.
+
+Tuning: 5-fold cross-validation inside the development set only, folds stratified by cohort × outcome, seed 2026; selection criterion = **CV log-loss** (a proper scoring rule, chosen to favour calibrated models). The tuned configuration is refitted on the whole development set. Out-of-fold (OOF) predictions with the selected configuration on the same folds give internal-validation performance.
+
+**Primary model** for downstream analyses (fairness, updating): the candidate with the lowest development CV log-loss (chosen separately for Task A and Task B). **SHAP model**: the tree model (RF/XGB/LGBM) with the lowest CV log-loss.
+
+Mandatory baselines:
+* (a) **Persistence rule** (Task A): predicted wave-2 status = wave-1 status (deterministic). Reported as accuracy, sensitivity/specificity, and as a strategy in decision curves. **Persistence model**: logistic regression on employed_w1 only (probabilistic version; AUROC identical to the rule) — gives Brier and calibration. For Task B the persistence analogue predicts "no re-entry" for everyone (null model; intercept-only logistic fitted on development data).
+* (b) **5-variable logistic model**: age_grp, disab_cat, employed_w1, work_ability, pain_interf (Task B: the same without employed_w1 → 4 variables).
+
+## 5. Performance in the temporal validation cohort (C3)
+Metrics for every model: AUROC; AUPRC for the minority class of each task (Task A: non-employment; Task B: re-entry) with the prevalence as no-skill reference; Brier score; scaled Brier = 1 − Brier / [ȳ(1 − ȳ)] (ȳ = observed C3 prevalence); calibration-in-the-large (CITL = intercept α of logit P(y) = α + logit p̂, offset); calibration slope (β of logit P(y) = a + β·logit p̂); ECE (10 equal-frequency bins); mean predicted vs observed; accuracy at p̂ = 0.5 (to compare with persistence).
+Uncertainty: 1,000 non-parametric bootstrap resamples of C3 (models fixed), percentile 95% CIs. Paired bootstrap CIs for differences vs the persistence model and vs the 5-variable model (ΔAUROC, ΔBrier).
+Calibration plots: LOWESS smoother (frac = 2/3) with decile points and histogram of predictions.
+Decision-curve analysis: net benefit for flagging workers at risk of non-employment, thresholds p_t = 0.05–0.80, for each model, treat-all, treat-none and the persistence rule (Task A); bootstrap CIs for ΔNB (primary model − persistence rule) at p_t = 0.2, 0.3, 0.4, 0.5.
+Internal (development OOF) performance reported alongside for comparison.
+
+## 6. Dataset-shift diagnostics (Task A population; Task B prevalence also reported)
+* Feature shift: standardized mean difference (SMD, dev vs C3; categorical: per level, maximum |SMD| reported) and population stability index (PSI; categories as bins; ε = 1e−4) per predictor. Conventional PSI reading: < 0.10 small, 0.10–0.25 moderate, > 0.25 large.
+* Adversarial validation: LightGBM domain classifier (fixed parameters: 300 trees, learning_rate 0.05, num_leaves 15, min_child_samples 40) distinguishing dev vs C3 from the predictors; 5-fold stratified OOF AUROC with bootstrap CI; drivers = mean |SHAP| of the domain classifier. Reference contrast: C1 vs C2.
+* Label / concept shift: outcome prevalence by cohort; transition probabilities P(employed w2 | employed w1) and P(employed w2 | not employed w1) by cohort with Wilson 95% CIs.
+* Covariate-shift attribution via importance weighting: a logistic domain classifier (same preprocessing; cross-fitted, 5 folds) estimates p(C3 | x); density-ratio weights for development rows w = [p/(1 − p)] × (n_dev / n_C3), truncated at the 99th percentile and normalised to mean 1; Kish effective sample size reported. The development OOF predictions of each model are evaluated (i) unweighted and (ii) importance-weighted; observed C3 performance is (iii). Covariate-shift component = (ii) − (i); total change = (iii) − (i); residual (label/concept shift + other) = (iii) − (ii). Bootstrap CIs (1,000) by resampling dev and C3 rows with weights held fixed. Also: covariate-shift-predicted C3 prevalence (weighted dev outcome mean) vs observed C3 prevalence.
+
+## 7. Model updating in C3 (learning curves)
+Repeated R = 50 times: split C3 at random 50/50 (stratified by outcome) into an *update pool* and a *held-out evaluation half*; from the pool draw random subsamples of n = 100, 250, 500, 1000 (Task B: n = 100, 250, 500 because its pool is ~616); apply to the primary model:
+(0) no update; (1) intercept recalibration (logit offset); (2) logistic recalibration (intercept + slope); (3) refit on the C3 subsample only (same model class and hyperparameters); (4) pooled refit on development + C3 subsample (same hyperparameters).
+Evaluate on the held-out half: AUROC, Brier, CITL, calibration slope, ECE; summarise mean and 2.5th–97.5th percentiles across repetitions.
+
+## 8. Fairness (Task A, C3, primary model and full LR; Task B primary model in supplement)
+Subgroups: sex (ref male); age group (ref ≤39); disability (none = no grade; mild = grades 8–14 [ref, largest]; severe = grades 1–7); accident type (occupational disease vs injury [accident or commuting], ref injury); job status at injury (regular [ref] vs non-regular = temporary, daily, self-employed).
+Metrics per subgroup: n, prevalence, AUROC, CITL, observed/expected ratio, TPR and FPR of the flag "risk of non-employment ≥ p_t". **Pre-specified p_t = 0.30** (≈ development prevalence of non-employment, 27%, rounded up: flags workers whose risk exceeds the base rate and implies accepting ≈2.3 unnecessary referrals per correctly identified worker, a plausible trade-off for low-cost RTW counselling). TPR = proportion of truly non-employed workers who are flagged (equal opportunity), FPR = proportion of employed workers who are flagged.
+Gaps (group − reference) with 1,000 bootstrap 95% CIs (resampling within C3). Development OOF subgroup metrics reported for comparison (were gaps already present before deployment?). Sensitivity: p_t = 0.50.
+
+## 9. Explainability and its stability
+TreeSHAP for the SHAP model. Global importance = mean |SHAP| per original variable (one-hot / nested columns summed per row before taking absolute values). Compare (a) the development model on development data vs (b) the same specification refitted on all of C3 (SHAP on C3): Spearman ρ of importance across variables with a bootstrap CI (100 bootstrap refits of the C3 model), top-10 overlap. Also cohort-specific refits (C1, C2, C3 separately; pairwise ρ) and the development model's SHAP evaluated on C3 data (attribution shift with a fixed model).
+
+## 10. Secondary validation designs
+* Chronological chain: train C1 → test C2; train C1+C2 → test C3 (= primary).
+* Leave-one-cohort-out: train C2+C3 → test C1; train C1+C3 → test C2; train C1+C2 → test C3.
+For each training set all candidate models are re-tuned with the same CV procedure (reduced search: n_iter 20 for XGB/LGBM, 10 for RF) and evaluated with AUROC, Brier, CITL, slope (1,000 bootstrap CIs). Both tasks.
+
+## 11. Sensitivity analyses
+S1. Survey-weighted evaluation in C3 using the wave-2 longitudinal weight (`wt_long`): weighted AUROC, Brier, CITL, slope, ECE for all models.
+S2. Weighted training (development rows weighted by wt_long normalised to mean 1 within cohort) + weighted evaluation — primary model and full LR.
+S3. Attrition (IPCW): per cohort, logistic model of wave-2 participation on wave-1 predictors; stabilised inverse-probability weights truncated at the 99th percentile; applied to training (development) and evaluation (C3) — primary model and full LR.
+S4. Comparability-restricted predictor set: drop svc_any (definition differs: no medical-rehabilitation flag in C2), drinker (unlabelled code in C1), adl_mental/adl_indoor/adl_outdoor/adl_work (C1 response distribution differs markedly from C2–C3, identified from descriptive distributions before outcome modelling), sensory_impair and phys_limitation (flagged "check comparability / use with caution" in the v2 harmonization notes; C3 levels markedly higher) — primary model and full LR refitted (primary hyperparameters) and validated in C3.
+S5. Fairness at p_t = 0.50.
+S6. Excluding commuting injuries from C3 evaluation (coverage absent in C1, began 2018).
+S7. Work-ability reference period (v2 correction: C1 wave-1 work ability refers to ~90 days after care closure, not the interview date; C2/C3 = current). (a) Development on C2 only (all candidate models re-tuned with the primary search), validated in C3; (b) work_ability removed from the predictor set (primary model and full LR refitted with primary hyperparameters; the 5-variable baseline becomes 4 variables), validated in C3.
+
+## Amendment v1.1 (2026-10-10, before any C3 prediction)
+* Shared data correction v2: `limitation` was item 1 (sensory impairment). Predictor set now uses `phys_limitation` (walking/stairs/lifting) and `sensory_impair` (34 predictors).
+* Added S7 (work-ability reference period in C1) and extended S4 with sensory_impair and phys_limitation.
+* Disclosure: before the correction, a timing test of the tuning code was run on the development set only (CV log-loss, no C3 predictions, old predictor set). It informed no analytic choice; the search spaces and selection rule are unchanged.
+
+## 12. Deviations from this plan (filled in after the analysis; all reported in the manuscript/supplement)
+1. **Task B fairness threshold.** Section 8 did not state a threshold for Task B. It was set by the same base-rate rule as for Task A (development prevalence of the target event, non-re-entry: 1 − 663/1,665 = 0.60) before the fairness results were inspected.
+2. **SHAP stability benchmark (post hoc addition).** In addition to the pre-specified bootstrap refits (B = 100 for Task A; 20 for Task B to limit run time), a split-half benchmark was added: 50 repetitions comparing importance rankings between disjoint, equal-sized halves of C3, of the development set, and between them. Reason: to separate temporal instability from sampling noise when interpreting ρ.
+3. **Updating summaries.** Section 7 specified the mean and 2.5th–97.5th percentiles. One configuration (Task B, refit on 100 C3 records) produced degenerate predictions with an extreme calibration slope in one repetition, which made the mean meaningless; learning curves and the manuscript therefore report the **median** (with the same percentiles) and, additionally, the share of repetitions in which an update improved on no update in the same held-out half. Means remain in `updating_summary_task*.csv`.
+4. **Calibration slope of the Task B null model** (constant predictions) is undefined and not reported.
+5. **Additional derived quantities** (not pre-specified, descriptive only): thresholds at which the decision curves of XGBoost and the persistence rule differ by < 0.01 (`key_numbers.csv`), and paired bootstrap differences versus the full LR (in addition to persistence and the 5-variable model).
+6. **Secondary-design tuning sizes** were as planned (n_iter 20 XGB/LGBM, 10 RF; EN full grid); S7a used the full primary search.
+No change was made to outcomes, predictors (after amendment v1.1), models, tuning rules, primary-model selection or test metrics after C3 results were seen.
+
+## Software / reproducibility
+Python 3, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, shap 0.48.0, statsmodels 0.14.6; seed 2026; n_jobs ≤ 4. Reporting follows TRIPOD+AI (2024).

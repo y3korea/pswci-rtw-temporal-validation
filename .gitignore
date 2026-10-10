@@ -1,0 +1,21 @@
+# Raw / derived person-level data must never be committed
+*.sav
+*.dta
+*.sas7bdat
+*.xlsx
+*.parquet
+*.csv.gz
+data/
+rtw_cache/
+cache/
+*.joblib
+*.pkl
+# environment
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+# run outputs (regenerate locally; caches hold row-level predictions)
+rtw_outputs/
+rtw_work/
