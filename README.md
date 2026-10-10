@@ -14,7 +14,7 @@ dataset-shift diagnostics (PSI/SMD, adversarial validation, transition probabili
 attribution); model-updating learning curves; subgroup fairness; SHAP-importance stability; secondary
 designs (chronological chain, leave-one-cohort-out) and sensitivity analyses (survey weights, IPCW for
 attrition, comparability-restricted predictors, commuting injuries, work-ability reference period).
-The pre-specified analysis plan is in `analysis_plan.md`.
+The analysis plan is in `docs/analysis_plan.md` (written before outcome modelling but not time-stamped or registered; see its dated Amendments section).
 
 ## Data access (not included)
 The Panel Study of Workers' Compensation Insurance (PSWCI, 산재보험패널조사) microdata are owned by the
@@ -62,5 +62,6 @@ Small cells (n < 5) are suppressed in subgroup tables.
 
 ## Licence and citation
 Code: MIT licence (see `LICENSE`). Please cite the article (see `CITATION.cff`).
-Generative AI (Anthropic Claude) was used to assist with code drafting; the authors reviewed and take
-responsibility for the code.
+Generative AI (Anthropic Claude) was used to draft the analysis code, to search and screen the literature, and to
+draft and edit the manuscript text. The authors reviewed and verified all analyses, code, references and text and
+take full responsibility for the content.

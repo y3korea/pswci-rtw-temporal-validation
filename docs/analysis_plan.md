@@ -7,7 +7,7 @@ Status at the time of writing: the harmonized file was inspected for sample size
 missingness and wave-1 predictor distributions by cohort, and the persistence accuracies /
 re-entry counts given in the brief were reproduced (C1 0.809, C2 0.797, C3 0.832;
 re-entry 261/535, 402/1,130, 357/1,232). No model involving the wave-2 outcome had been fitted.
-Any later deviation will be listed in Section 12 with its reason and reported in the manuscript.
+Any later deviation is listed in the dated Amendments section with its reason and reported in the manuscript.
 
 ## 1. Data and unit of analysis
 * Source: `00_derived_data/pswci_harmonized_long.parquet` (re-built from raw SPSS files in the Colab notebook by `pswci_harmonize.py`).
@@ -96,12 +96,15 @@ S5. Fairness at p_t = 0.50.
 S6. Excluding commuting injuries from C3 evaluation (coverage absent in C1, began 2018).
 S7. Work-ability reference period (v2 correction: C1 wave-1 work ability refers to ~90 days after care closure, not the interview date; C2/C3 = current). (a) Development on C2 only (all candidate models re-tuned with the primary search), validated in C3; (b) work_ability removed from the predictor set (primary model and full LR refitted with primary hyperparameters; the 5-variable baseline becomes 4 variables), validated in C3.
 
-## Amendment v1.1 (2026-10-10, before any C3 prediction)
+## Amendments (dated; the plan body above is otherwise unchanged)
+
+### Amendment v1.1 — 2026-10-10, about 18:55 KST, BEFORE any cohort-3 prediction was computed
 * Shared data correction v2: `limitation` was item 1 (sensory impairment). Predictor set now uses `phys_limitation` (walking/stairs/lifting) and `sensory_impair` (34 predictors).
 * Added S7 (work-ability reference period in C1) and extended S4 with sensory_impair and phys_limitation.
 * Disclosure: before the correction, a timing test of the tuning code was run on the development set only (CV log-loss, no C3 predictions, old predictor set). It informed no analytic choice; the search spaces and selection rule are unchanged.
+* Sections 3 and 11 of the body were edited in place at this amendment. Original v1.0 wording: the predictor list contained `limitation` (33 variables); S4 dropped only svc_any, drinker and the four ADL difficulty items; S7 did not exist.
 
-## 12. Deviations from this plan (filled in after the analysis; all reported in the manuscript/supplement)
+### Amendment v1.2 — 2026-10-10, about 19:50 KST, AFTER the results were seen: record of deviations (no analysis was changed in response to results)
 1. **Task B fairness threshold.** Section 8 did not state a threshold for Task B. It was set by the same base-rate rule as for Task A (development prevalence of the target event, non-re-entry: 1 − 663/1,665 = 0.60) before the fairness results were inspected.
 2. **SHAP stability benchmark (post hoc addition).** In addition to the pre-specified bootstrap refits (B = 100 for Task A; 20 for Task B to limit run time), a split-half benchmark was added: 50 repetitions comparing importance rankings between disjoint, equal-sized halves of C3, of the development set, and between them. Reason: to separate temporal instability from sampling noise when interpreting ρ.
 3. **Updating summaries.** Section 7 specified the mean and 2.5th–97.5th percentiles. One configuration (Task B, refit on 100 C3 records) produced degenerate predictions with an extreme calibration slope in one repetition, which made the mean meaningless; learning curves and the manuscript therefore report the **median** (with the same percentiles) and, additionally, the share of repetitions in which an update improved on no update in the same held-out half. Means remain in `updating_summary_task*.csv`.
@@ -109,6 +112,9 @@ S7. Work-ability reference period (v2 correction: C1 wave-1 work ability refers 
 5. **Additional derived quantities** (not pre-specified, descriptive only): thresholds at which the decision curves of XGBoost and the persistence rule differ by < 0.01 (`key_numbers.csv`), and paired bootstrap differences versus the full LR (in addition to persistence and the 5-variable model).
 6. **Secondary-design tuning sizes** were as planned (n_iter 20 XGB/LGBM, 10 RF; EN full grid); S7a used the full primary search.
 No change was made to outcomes, predictors (after amendment v1.1), models, tuning rules, primary-model selection or test metrics after C3 results were seen.
+
+### Status of pre-specification
+This plan was written (v1.0, about 18:46 KST) before any outcome model was fitted, but it was not time-stamped by an external service, committed to version control, or registered before the analysis; it was first committed to the local git repository after the analysis had been run.
 
 ## Software / reproducibility
 Python 3, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, shap 0.48.0, statsmodels 0.14.6; seed 2026; n_jobs ≤ 4. Reporting follows TRIPOD+AI (2024).
