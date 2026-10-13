@@ -1,4 +1,12 @@
-"""Figures for revision v2, drawn only from aggregated CSV tables (greyscale-readable)."""
+"""Figures for revision v2, drawn only from aggregated CSV tables (greyscale-readable).
+
+Layout pass 2026-10-13 (no change to what is plotted): legends that sat on marks were moved outside the axes
+(_legend_outside) or into a corner verified to be empty, the "all (n)" x tick label of Fig. 4b-c is staggered so
+it cannot collide with "1000", the smallest text was raised to 6 pt, and the within-C3 series got distinct markers.
+Second pass (same day): the Fig. S1 legend is now a figure legend built from the Pooled panel, which carries all six
+strategies (the in-panel legend of A1 lacked "Status rule"), "Flag none" got a dash-dot linestyle so that it is not
+colour-only versus "Parsimonious LR", and the Fig. 2 calibration legends were tightened so they clear the CI bands.
+"""
 from __future__ import annotations
 
 import os
@@ -33,6 +41,20 @@ def _save(fig, out, name):
     plt.close(fig)
 
 
+def _legend_outside(fig, axes_span, handles, labels, ncol, side="below", fontsize=6.0, gap=0.006):
+    """Figure legend centred on the given axes and placed entirely outside the figure area (below or above), so it
+    can never cover marks, tick labels or axis labels; bbox_inches="tight" in _save extends the saved page to
+    include it. Call after fig.tight_layout() so that the axes positions are final."""
+    x0 = min(a.get_position().x0 for a in axes_span)
+    x1 = max(a.get_position().x1 for a in axes_span)
+    if side == "below":
+        anchor, loc = ((x0 + x1) / 2, -gap), "upper center"
+    else:
+        anchor, loc = ((x0 + x1) / 2, 1 + gap), "lower center"
+    return fig.legend(handles, labels, loc=loc, bbox_to_anchor=anchor, ncol=ncol, frameon=False, fontsize=fontsize,
+                      handlelength=1.8, columnspacing=1.2, handletextpad=0.5)
+
+
 def _t(out, name):
     return pd.read_csv(os.path.join(out, "tables", name))
 
@@ -49,9 +71,9 @@ def fig1_framework(out):
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     steps = [("1 Harmonise", "three national\ncohorts\n(2013/18/23)"),
-             ("2 Develop", "C1+C2; seven\nlearners; repeated-\nCV selection"),
+             ("2 Develop", "C1+C2; seven\nlearners;\nrepeated-CV\nselection"),
              ("3 Validate", "C3: sample and\npopulation\n(weighted)"),
-             ("4 Diagnose", "adversarial AUROC,\ncohort effects,\nDISDE (X vs Y|X)"),
+             ("4 Diagnose", "adversarial\nAUROC, cohort\neffects, DISDE\n(X vs Y|X)"),
              ("5 Update", "conditional IW\nrecalibration;\nguarded labelled\nupdating"),
              ("6 Monitor", "net benefit,\nsubgroup errors,\nattributions")]
     w, h, gap, y0 = 0.143, 0.62, 0.022, 0.3
@@ -60,7 +82,7 @@ def fig1_framework(out):
         ax.add_patch(FancyBboxPatch((x, y0), w, h, boxstyle="round,pad=0.005,rounding_size=0.02",
                                     fc="#f0f0f0" if i % 2 == 0 else "white", ec="#222222", lw=0.8))
         ax.text(x + w / 2, y0 + h - 0.1, title, ha="center", va="center", fontsize=6.8, fontweight="bold")
-        ax.text(x + w / 2, y0 + h / 2 - 0.08, body, ha="center", va="center", fontsize=5.5, linespacing=1.25)
+        ax.text(x + w / 2, y0 + h / 2 - 0.08, body, ha="center", va="center", fontsize=6.0, linespacing=1.25)
         if i < len(steps) - 1:
             ax.annotate("", xy=(x + w + gap, y0 + h / 2), xytext=(x + w, y0 + h / 2),
                         arrowprops=dict(arrowstyle="-|>", lw=0.9, color="#222222"))
@@ -69,7 +91,7 @@ def fig1_framework(out):
     ax.annotate("", xy=(x_to, y0 - 0.02), xytext=(x_from, y0 - 0.02),
                 arrowprops=dict(arrowstyle="-|>", lw=0.7, color="#777777", ls="--",
                                 connectionstyle="arc3,rad=-0.12"))
-    ax.text(0.5, 0.02, "re-develop when diagnostics or monitoring indicate Y|X shift", ha="center", fontsize=5.8,
+    ax.text(0.5, 0.02, "re-develop when diagnostics or monitoring indicate Y|X shift", ha="center", fontsize=6.2,
             color="#555555")
     _save(fig, out, "fig1_framework")
 
@@ -96,7 +118,8 @@ def fig2_performance(out):
             ax.set_title(f"({'abcd'[2 * j + i]}) {TASK_TITLE[task]}, {lab}", loc="left")
             ax.set_xlabel("Predicted P(employed)")
             ax.set_ylabel("Observed")
-            ax.legend(frameon=False, loc="upper left")
+            # compact legend: with the default pad/handle length the "Ridge-OH" label touched the CI band in (b)
+            ax.legend(frameon=False, loc="upper left", borderaxespad=0.2, handlelength=1.5)
     ax = fig.add_subplot(gs[:, 2])
     rows = []
     for task in ("A1", "A2", "P"):
@@ -124,10 +147,11 @@ def fig2_performance(out):
             y += 1
         y += 0.6
     ax.set_yticks([p for p, _ in ylab])
-    ax.set_yticklabels([l for _, l in ylab], fontsize=5.6)
+    ax.set_yticklabels([l for _, l in ylab], fontsize=6.0)
     ax.set_xlabel("AUROC in C3 (95% CI)")
     ax.set_title("(e) Discrimination", loc="left")
-    ax.legend(frameon=False, loc="lower right", fontsize=6)
+    # lower-left corner is empty (pooled-task AUROCs and their CIs all lie above 0.7); lower right covered P: EBM
+    ax.legend(frameon=False, loc="lower left", fontsize=6.0)
     fig.tight_layout()
     _save(fig, out, "fig2_performance")
 
@@ -150,7 +174,7 @@ def fig3_shift(out):
         y += 0.5
     ax.axvline(0, color="#888888", lw=0.6)
     ax.set_yticks([p for p, _ in labels])
-    ax.set_yticklabels([l for _, l in labels], fontsize=5.6)
+    ax.set_yticklabels([l for _, l in labels], fontsize=6.0)
     ax.set_xlabel("Adjusted log-odds of employment")
     ax.set_title("(a) Conditional cohort effects", loc="left")
     ax = axes[1]
@@ -181,11 +205,11 @@ def fig3_shift(out):
         k += 0.6
     ax.axhline(0, color="#888888", lw=0.6)
     ax.set_xticks([p for p, _ in xs])
-    ax.set_xticklabels([l for _, l in xs], fontsize=5.4)
+    ax.set_xticklabels([l for _, l in xs], fontsize=6.0)
     ax.set_ylabel("Change in employment prevalence")
     ax.set_xlabel("Source cohort(s) → C3")
     ax.set_title("(b) DISDE decomposition of outcome change", loc="left")
-    ax.legend(frameon=False, fontsize=5.6, loc="lower left", ncol=2)
+    h_b, l_b = ax.get_legend_handles_labels()   # legend drawn below the panel (an inside legend covered the C1/A2 bar)
     ax = axes[2]
     a = adv[adv.predictors == "all"].reset_index(drop=True)
     b = adv[adv.predictors == "restricted"].reset_index(drop=True)
@@ -196,11 +220,13 @@ def fig3_shift(out):
         ax.errorbar(r.AUROC, -i - 0.12, xerr=np.clip(np.array([[r.AUROC - r.lo], [r.hi - r.AUROC]], dtype=float), 0, None), fmt="s", ms=3, mfc="white",
                     mec="#111111", ecolor="#111111", label="restricted (S4b)" if i == 0 else None)
     ax.set_yticks([-i for i in range(len(a))])
-    ax.set_yticklabels(a.contrast.str.replace("+", "+", regex=False), fontsize=5.8)
+    ax.set_yticklabels(a.contrast.str.replace("+", "+", regex=False), fontsize=6.0)
     ax.set_xlabel("Domain-classifier AUROC")
     ax.set_title("(c) Adversarial validation", loc="left")
-    ax.legend(frameon=False, fontsize=5.6, loc="lower left")
+    h_c, l_c = ax.get_legend_handles_labels()   # legend drawn below the panel (an inside legend covered C1 vs C2)
     fig.tight_layout()
+    _legend_outside(fig, [axes[1]], h_b, l_b, ncol=2, side="below")
+    _legend_outside(fig, [axes[2]], h_c, l_c, ncol=1, side="below")
     _save(fig, out, "fig3_shift")
 
 
@@ -231,10 +257,11 @@ def fig4_updating(out):
         y += 0.5
     ax.axvline(1, color="#888888", lw=0.6)
     ax.set_yticks([p for p, _ in ylab])
-    ax.set_yticklabels([l for _, l in ylab], fontsize=5.6)
+    ax.set_yticklabels([l for _, l in ylab], fontsize=6.0)
     ax.set_xlabel("Calibration slope in target")
     ax.set_title("(a) Label-free recalibration", loc="left")
-    ax.legend(frameon=False, fontsize=5.4, loc="upper right")
+    # lower-right corner is empty (the bottom rows' CIs end below slope 2); upper right touched the A1 C1->C3 CI
+    ax.legend(frameon=False, fontsize=6.0, loc="lower right")
     sty = {"Intercept recalibration": ("#111111", "-", "o"), "Logistic recalibration": ("#555555", (0, (4, 2)), "s"),
            "Closed testing": ("#888888", (0, (1, 1)), "^"), "Pooled refit (C1 + C2 sample)": ("#111111", (0, (5, 1, 1, 1)), "D"),
            "Ridge refit on C2 sample only": ("#aaaaaa", "-", "v")}
@@ -253,13 +280,14 @@ def fig4_updating(out):
         ns = sorted(s[s.n > 0].n.unique())
         ticks = [n for n in ns if n in (100, 250, 500, 1000)] + [max(ns)]
         ax.set_xticks(np.log10(ticks))
-        ax.set_xticklabels([str(int(n)) for n in ticks[:-1]] + [f"all\n({int(ticks[-1])})"], fontsize=5.6)
+        # "all (n)" is written one line lower than the numeric ticks: log10(1130) sits next to log10(1000)
+        ax.set_xticklabels([str(int(n)) for n in ticks[:-1]] + [f"\nall\n({int(ticks[-1])})"], fontsize=6.0)
         ax.set_xlabel("C2 records used for updating")
         ax.set_ylabel("ICI in C3")
         ax.set_title(f"({'bc'[k]}) Lagged update, {TASK_TITLE[task]}", loc="left")
-        if k == 1:
-            ax.legend(frameon=False, fontsize=5.0, loc="upper right")
     fig.tight_layout()
+    # shared legend of (b) and (c) under those panels; an inside legend covered the no-update and refit lines in (c)
+    _legend_outside(fig, axes[1:], *axes[2].get_legend_handles_labels(), ncol=3, side="below")
     _save(fig, out, "fig4_updating")
 
 
@@ -289,10 +317,10 @@ def figS_fairness(out):
             ax.grid(axis="y", visible=False)
         ref = rows.drop_duplicates("group").set_index("group")["reference"]
         axes[0].set_yticks(yy)
-        axes[0].set_yticklabels([f"{g}: {lv} vs {ref[g]}" for g, lv in order], fontsize=5.6)
+        axes[0].set_yticklabels([f"{g}: {lv} vs {ref[g]}" for g, lv in order], fontsize=6.0)
         h, l = axes[0].get_legend_handles_labels()
-        fig.legend(h, l, loc="upper center", ncol=2, frameon=False, bbox_to_anchor=(0.6, 1.06))
         fig.tight_layout()
+        _legend_outside(fig, axes, h, l, ncol=2, side="above", fontsize=6.3)
         _save(fig, out, f"figS_fairness_{task}")
 
 
@@ -302,8 +330,10 @@ def figS_dca(out):
         for i, lab in enumerate(("unweighted", "weighted")):
             ax = axes[i, j]
             d = _t(out, f"dca_{task}_{lab}.csv")
-            styles = {"Flag all": ("#777777", (0, (2, 2))), "Flag none": ("#aaaaaa", "-"), "Status rule": ("#555555", (0, (1, 1))),
-                      "RidgeOH": ("#777777", (0, (4, 2))), "LR-small": ("#bbbbbb", "-")}
+            # "Flag none" is dash-dot so that it differs from "Parsimonious LR" by more than its grey level
+            styles = {"Flag all": ("#777777", (0, (2, 2))), "Flag none": ("#aaaaaa", (0, (3, 1, 1, 1))),
+                      "Status rule": ("#555555", (0, (1, 1))), "RidgeOH": ("#777777", (0, (4, 2))),
+                      "LR-small": ("#bbbbbb", "-")}
             prim = _primary(out, task)
             styles[prim] = ("#111111", "-")
             ymax = 0
@@ -317,9 +347,10 @@ def figS_dca(out):
             ax.set_title(f"{TASK_TITLE[task]}, {lab}", loc="left")
             ax.set_xlabel("Threshold risk of undesired outcome")
             ax.set_ylabel("Net benefit")
-            if i == 0 and j == 0:
-                ax.legend(frameon=False, fontsize=5.2)
     fig.tight_layout()
+    # one legend above all panels, taken from the Pooled-unweighted axes: only the pooled tables contain the
+    # "Status rule" strategy, so a legend built from the A1 panel would miss that curve
+    _legend_outside(fig, list(axes.flat), *axes[0, 2].get_legend_handles_labels(), ncol=6, side="above")
     _save(fig, out, "figS_decision_curves")
 
 
@@ -332,22 +363,23 @@ def figS_withinc3(out):
         for j, k in enumerate(("AUROC", "Brier", "ICI")):
             ax = axes[i, j]
             ax.axhline(base[f"{k}_median"], color="#bbbbbb", lw=1.2)
-            for meth, c, ls in (("Intercept recalibration", "#111111", "-"), ("Logistic recalibration", "#555555", (0, (4, 2))),
-                                ("Closed testing", "#888888", (0, (1, 1))),
-                                ("Refit on C3 sample (development hyperparameters)", "#aaaaaa", "-"),
-                                ("Ridge refit on C3 sample (CV-tuned)", "#777777", (0, (5, 1, 1, 1))),
-                                ("Pooled refit (dev + C3 sample)", "#333333", (0, (2, 1)))):
+            # markers follow Fig. 4 for the same methods so that the series stay distinct in greyscale
+            for meth, c, ls, mk in (("Intercept recalibration", "#111111", "-", "o"),
+                                    ("Logistic recalibration", "#555555", (0, (4, 2)), "s"),
+                                    ("Closed testing", "#888888", (0, (1, 1)), "^"),
+                                    ("Refit on C3 sample (development hyperparameters)", "#aaaaaa", "-", "P"),
+                                    ("Ridge refit on C3 sample (CV-tuned)", "#777777", (0, (5, 1, 1, 1)), "v"),
+                                    ("Pooled refit (dev + C3 sample)", "#333333", (0, (2, 1)), "D")):
                 d = d0[d0.method == meth].sort_values("n")
                 if len(d):
-                    ax.plot(np.log10(d.n), d[f"{k}_median"], color=c, ls=ls, marker="o", ms=2, lw=0.9,
+                    ax.plot(np.log10(d.n), d[f"{k}_median"], color=c, ls=ls, marker=mk, ms=2.6, mfc="white", lw=0.9,
                             label=meth if (i == 0 and j == 0) else None)
             ns = sorted(d0[d0.n > 0].n.unique())
             ax.set_xticks(np.log10(ns))
             ax.set_xticklabels([str(int(n)) for n in ns])
             ax.set_title(f"{TASK_TITLE[task]}: {k}", loc="left")
-    fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="upper center", ncol=3, frameon=False, fontsize=5.4,
-               bbox_to_anchor=(0.5, 1.06))
     fig.tight_layout()
+    _legend_outside(fig, list(axes.flat), *axes[0, 0].get_legend_handles_labels(), ncol=3, side="above")
     _save(fig, out, "figS_withinC3_updating")
 
 
@@ -361,13 +393,13 @@ def figS_attribution(out):
         ax.plot(t.deployed_on_C3, yy, "s", mfc="white", mec="#111111", ms=3.5, label="Deployed model, C3 data")
         ax.plot(t.refit_on_C3, yy, "^", color="#888888", ms=3.2, label="Refitted on C3")
         ax.set_yticks(yy)
-        ax.set_yticklabels([VAR_LABELS.get(v, v) for v in t.variable], fontsize=5.8)
+        ax.set_yticklabels([VAR_LABELS.get(v, v) for v in t.variable], fontsize=6.0)
         ax.set_xscale("log")
         ax.set_xlabel("Mean |attribution| (log-odds, log scale)")
         ax.set_title(f"{TASK_TITLE[task]} ({SHORT.get(t.model.iloc[0], t.model.iloc[0])})", loc="left")
-        if k == 0:
-            ax.legend(frameon=False, fontsize=5.4, loc="lower right")
     fig.tight_layout()
+    # shared legend above both panels; an inside legend covered the lowest-ranked variables of the retention panel
+    _legend_outside(fig, axes, *axes[0].get_legend_handles_labels(), ncol=3, side="above")
     _save(fig, out, "figS_attribution")
 
 

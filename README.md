@@ -1,7 +1,7 @@
 # Temporal validation, shift diagnosis and recalibration of return-to-work prediction models (PSWCI, 2013–2024)
 
 Analysis code for the manuscript *"Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work
-Prediction Models in Three National Workers' Compensation Cohorts"* ([Author 1], [Author 2]; prepared for submission
+Prediction Models in Three National Workers' Compensation Cohorts"* (Wansuk Choi, Miran Goo, Seoa Park, Yusung Jang, Myeong-Chul Park (corresponding author); prepared for submission
 to the Journal of the Korea Society of Computer and Information).
 
 ## Aim
@@ -31,12 +31,16 @@ The analysis plan, with dated amendments, is in `docs/analysis_plan.md`. It was 
 was not time-stamped or registered; a debug run computed cohort-3 results before the first full run, and all v2
 analyses are post hoc (see the plan's "Status of pre-specification").
 
-## Data access (not included)
-The Panel Study of Workers' Compensation Insurance (PSWCI, 산재보험패널조사) microdata are owned by the
-Korea Workers' Compensation & Welfare Service Research Institute (근로복지공단 근로복지연구원) and **may not be
-redistributed**. Request them from the official PSWCI site: <https://www.pswci.or.kr/Data/Download.aspx>
-("데이터 신청하기"; research use only, no transfer to third parties; users are asked to notify the institute
-of resulting publications). Place the three cohort folders (as distributed) under one directory, `DATA_ROOT`:
+## Data access
+The PSWCI microdata (산재보험패널조사) are public-use data released free of charge by the Labor Welfare Research
+Institute of the Korea Workers' Compensation & Welfare Service (근로복지공단 근로복지연구원). Anyone can download them
+from <https://www.pswci.or.kr/Data/Download.aspx> (button "산재보험패널 데이터 신청하기": online application with
+identity verification, then immediate download) after accepting the conditions of use: research purposes only (no
+commercial use), no lending or transfer to third parties, citation of the source ("Panel Study of Workers'
+Compensation Insurance, Korea Workers' Compensation & Welfare Service Labor Welfare Research Institute"), and
+notification of resulting theses, papers or presentations to the institute (pswci@comwel.or.kr). Because of the
+no-transfer condition the raw files are not included here; this repository contains no data and no person-level
+outputs. Place the three downloaded cohort folders (as distributed) under one directory, `DATA_ROOT`:
 
 ```
 DATA_ROOT/

@@ -29,8 +29,10 @@ Coding traps handled here (each one was verified against the SPSS value labels):
   * "Long-lasting disability" block: item 1 = sensory impairment, item 2 = physical-activity
     limitation (walking/stairs/lifting). Use `phys_limitation` for physical limitation.
   * Cohort 1 wave-1 work ability refers to ~90 days after care closure (not the interview date).
-Raw data are NOT redistributable; this script only reads files the user obtained
-from the Korea Workers' Compensation & Welfare Service research institute.
+Raw PSWCI data are public-use data (free download for anyone from
+https://www.pswci.or.kr/Data/Download.aspx after accepting the conditions of use); because
+the conditions prohibit transfer to third parties they are not redistributed with this code,
+and this script only reads files the user downloaded.
 """
 from __future__ import annotations
 
