@@ -90,5 +90,5 @@ Small cells (n < 5) are suppressed in subgroup tables.
 
 ## Licence, citation and AI use
 Code: MIT licence (see `LICENSE`). Please cite the article (see `CITATION.cff`).
-Generative AI (Anthropic Claude, Opus 5.5) proposed the analyses and wrote and ran this code; the authors are
+Generative AI (Anthropic Claude: Opus 5.5, claude-opus-5-5, and Fable 5.1, claude-fable-5-1) proposed the analyses and wrote and ran this code; the authors are
 responsible for reviewing and verifying it. [Authors: update this statement after your own code review.]
