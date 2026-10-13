@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite the accompanying article."
-title: "Temporal validation, shift diagnosis and label-free recalibration of return-to-work prediction models (PSWCI cohorts 2013-2024): analysis code"
+title: "Temporal validation, shift diagnosis and recalibration of return-to-work prediction models (PSWCI cohorts 2013-2024): analysis code"
 authors:
   - family-names: "[Author 1 family name]"
     given-names: "[Author 1 given name]"

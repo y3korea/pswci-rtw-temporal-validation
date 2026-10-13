@@ -428,3 +428,48 @@ def attrition(a, out):
     t = pd.DataFrame(rows)
     t.to_csv(T(out, "attrition.csv"), index=False)
     return t
+
+
+def weights_design(a, out):
+    """Round 2: survey-weight diagnostics per cohort and task (analysed wave-2 respondents): Kish effective sample size
+    of the wave-2 longitudinal weights, max/min weight ratio, number of sampling strata and of strata with a single
+    analysed unit (these make the within-stratum bootstrap mildly anti-conservative)."""
+    rows = []
+    for task in ("A1", "A2", "P"):
+        d = task_frame(a, task)
+        for c in (1, 2, 3):
+            g = d[d["cohort"] == c]
+            w = g["wt_w2"].values.astype(float)
+            has_strata = g["strata"].notna().any()      # sampling strata are available for the evaluation cohort
+            sizes = g.groupby("strata").size()
+            rows.append({"task": task, "cohort": c, "n": len(g), "kish_ess": w.sum() ** 2 / np.sum(w ** 2),
+                         "ess_pct": 100 * (w.sum() ** 2 / np.sum(w ** 2)) / len(g), "max_min_weight_ratio": w.max() / w.min(),
+                         "n_strata": int(len(sizes)) if has_strata else np.nan,
+                         "single_unit_strata": int((sizes == 1).sum()) if has_strata else np.nan})
+    t = pd.DataFrame(rows)
+    t.to_csv(T(out, "weights_design.csv"), index=False)
+    return t
+
+
+def disde_restricted(res, sec, a, out, log=print):
+    """Round 2 robustness: prevalence DISDE decomposition (model-free) with the domain classifier restricted to the
+    comparability-restricted predictor set S4b, for the pooled and cohort-specific designs."""
+    import rtw_shift as SH
+    from rtw_develop import designs_for
+    variables = [v for v in PREDICTORS if v not in RESTRICTED_DROP_B]
+    rows = []
+    for task in ("A1", "A2", "P"):
+        d = task_frame(a, task)
+        Xn = designs_for(d, task, variables=variables)["num"][0]
+        for lab, r in (("C1+C2 -> C3", res[task]), ("C1 -> C3", sec[("c1to3", task)]),
+                       ("C2 -> C3", sec[("c2to3", task)])):
+            Xs, Xt = Xn.loc[r["dev_index"]], Xn.loc[r["test_index"]]
+            tab, _ = SH.disde(Xs, r["y_dev"], {"RidgeOH": r["oof"]["RidgeOH"]}, Xt, r["y_test"],
+                              {"RidgeOH": r["test"]["RidgeOH"]})
+            tab = tab[tab.metric == "Prevalence"].copy()
+            tab["task"], tab["design"], tab["predictors"] = task, lab, "S4b (restricted)"
+            rows.append(tab)
+        log(f"[disde restricted {task}] done")
+    t = pd.concat(rows, ignore_index=True)
+    t.to_csv(T(out, "shift_disde_restricted.csv"), index=False)
+    return t

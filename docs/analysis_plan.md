@@ -178,6 +178,29 @@ labelled post hoc in the manuscript. The v1 results are archived in `05_results/
   in all three tasks with small margins (e.g. A2 0.5819 vs 0.5820 for the EBM); XGBoost gave nearly identical C3
   results. The manuscript reports this explicitly.
 
+### Amendment v2.2 — 2026-10-11, about 07:15 KST (AFTER a second internal pre-submission review using AI-simulated reviewers; all results had been seen)
+* **Status of timings (self-reported).** All v2 runs (2026-10-10 21:19, 21:42, 22:04; 2026-10-11 05:12) used code that
+  was committed to the local git repository only afterwards (commit 7ea059d, 2026-10-11 05:35). The times given in
+  Amendments v2.0 and v2.1 (for example, v2.0 written "before the revised analyses were run", and v2.1 "no code used by
+  the earlier stages was modified") are therefore self-reported and cannot be checked against version control. An
+  independent re-run of the committed code from the raw files reproduced every table (max |diff| < 1e-14).
+* **Correction to Amendment v2.1.** v2.1 said that XGBoost gave "nearly identical C3 results" and that "the manuscript
+  reports this explicitly". This holds for AUROC only, and the manuscript did not report it at that time. For re-entry,
+  XGBoost was better calibrated in C3 than CatBoost (slope 1.00 vs 1.31; CITL −0.13 vs −0.23). The manuscript now
+  reports this.
+* **Descriptive additions (post hoc).** (i) Components of the repeated-CV log-loss (repeat 1 reuses the tuning folds;
+  repeat 2 uses independent folds) and the model each rule would select (v1 single-CV rule: EBM for A1 and A2;
+  independent repeat: CatBoost in every task) — `tuning_primary.csv`; (ii) survey-weight diagnostics (Kish ESS, weight
+  ratio, single-unit strata) — `weights_design.csv`; (iii) prevalence DISDE decomposition with the domain classifier
+  restricted to predictor set S4b — `shift_disde_restricted.csv`.
+* **Relabelling and export (no change to any estimate).** Prevalence rows of `shift_disde.csv` are labelled
+  "model-free" (they use observed outcomes only). Exported CatBoost models no longer contain per-leaf training counts
+  (`leaf_weights`; some pooled-task leaves held < 5 records), the training-loss history or identifiers; linear models
+  are exported as intercept and original-scale coefficients only. Scoring is unchanged (checked).
+* **Interpretation (no new analysis).** Label-free importance-weighted recalibration is the method of Park et al.
+  (AISTATS 2020) with Platt-type scaling; it is evaluated, not proposed. Algorithm 1 step 2(c) is conditional. Closed
+  testing at n = 100–250 often declined needed updates; this is reported.
+
 ### Status of pre-specification
 This plan was written (v1.0, about 18:46 KST) before any outcome model was fitted. A debug run of the full pipeline with reduced resampling (19:01-19:23 KST) computed cohort-3 results before the final v1 run; the code changes made afterwards are listed in Amendment v1.2 and run_log.txt. The plan was not time-stamped by an external service, committed to version control, or registered before the analysis; it was first committed to the local git repository after the analysis had been run.
 

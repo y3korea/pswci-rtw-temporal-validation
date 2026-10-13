@@ -52,7 +52,7 @@ def fig1_framework(out):
              ("2 Develop", "C1+C2; seven\nlearners; repeated-\nCV selection"),
              ("3 Validate", "C3: sample and\npopulation\n(weighted)"),
              ("4 Diagnose", "adversarial AUROC,\ncohort effects,\nDISDE (X vs Y|X)"),
-             ("5 Update", "label-free IW\nrecalibration;\nlagged relabelling"),
+             ("5 Update", "conditional IW\nrecalibration;\nguarded labelled\nupdating"),
              ("6 Monitor", "net benefit,\nsubgroup errors,\nattributions")]
     w, h, gap, y0 = 0.143, 0.62, 0.022, 0.3
     for i, (title, body) in enumerate(steps):

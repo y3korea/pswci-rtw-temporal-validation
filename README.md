@@ -1,6 +1,6 @@
-# Temporal validation, shift diagnosis and label-free recalibration of return-to-work prediction models (PSWCI, 2013–2024)
+# Temporal validation, shift diagnosis and recalibration of return-to-work prediction models (PSWCI, 2013–2024)
 
-Analysis code for the manuscript *"Temporal Validation, Shift Diagnosis and Label-Free Recalibration of Return-to-Work
+Analysis code for the manuscript *"Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work
 Prediction Models in Three National Workers' Compensation Cohorts"* ([Author 1], [Author 2]; prepared for submission
 to the Journal of the Korea Society of Computer and Information).
 
@@ -20,7 +20,8 @@ longitudinal weights, in the insured population. The code reproduces:
 - shift diagnosis by source cohort: adversarial validation, conditional cohort effects, an outcome-in-domain-classifier
   test, a DISDE-type decomposition (X-shift vs Y|X shift on a shared support), case-mix expected AUROC and
   importance-weighting truncation sensitivity;
-- updating: label-free importance-weighted recalibration, lagged labelled updating (C1 model, C2 update samples,
+- updating: label-free importance-weighted recalibration (the method of Park et al., AISTATS 2020, with Platt-type
+  scaling; evaluated, not proposed), lagged labelled updating (C1 model, C2 update samples,
   C3 evaluation) with closed testing, and a within-C3 design;
 - exploratory fairness audit (TPR/FPR/PPV/NPV, calibration-implied TPR, BH q-values), attribution stability,
   secondary designs and sensitivity analyses (IPCW, restricted predictors, commuting injuries, work ability, weighted
@@ -45,7 +46,7 @@ DATA_ROOT/
 ```
 
 No person-level data or row-level predictions are stored in this repository. `.gitignore` excludes raw and derived
-data files case-insensitively.
+data files with bracket patterns (e.g. `*.[sS][aA][vV]`), so the match does not depend on `core.ignorecase`.
 
 ## Reproduce
 ```bash
@@ -56,7 +57,7 @@ export RTW_OUT_DIR="$PWD/rtw_outputs"            # aggregated tables (CSV) and f
 export RTW_CACHE_DIR="$PWD/rtw_cache"            # fitted models / row-level predictions: never share
 export JOBLIB_TEMP_FOLDER="$PWD/joblib_tmp"      # avoids loss of joblib memmaps in system temp folders
 python src/run_all.py                            # about 1 hour on 4 CPU cores (Apple silicon), n_jobs = 4
-python src/export_models.py "$RTW_CACHE_DIR" "$RTW_OUT_DIR/models"   # model files without person-level data
+python src/export_models.py "$RTW_CACHE_DIR" "$RTW_OUT_DIR/models"   # model files: no person-level data, no per-leaf counts
 ```
 `RTW_STAGES` runs a subset of stages (describe, evaluate, secondary, shift, iwrecal, lagged, withinc3, fairness,
 extras, sensitivity, report); development models are cached. `src/pswci_harmonize.py` rebuilds the harmonised long

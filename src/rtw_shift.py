@@ -210,7 +210,9 @@ def disde(Xs, ys, ps_d, Xt, yt, pt_d, B=B_SHIFT, seed=SEED, kind="LR"):
                  "YgivenX_shift": bb[:, 2] - bb[:, 1], "X_shift_target_side": bb[:, 3] - bb[:, 2]}
         for k, v in comps.items():
             s = bcomp[k][np.isfinite(bcomp[k])]
-            rows.append({"model": model, "metric": m, "component": k, "estimate": v,
+            # the prevalence decomposition uses observed outcomes only (no model): label it model-free (round 2)
+            rows.append({"model": "model-free" if m == "Prevalence" else model, "metric": m, "component": k,
+                         "estimate": v,
                          "lo": np.percentile(s, 2.5) if len(s) else np.nan,
                          "hi": np.percentile(s, 97.5) if len(s) else np.nan,
                          "source_value": mP, "shared_source_value": mSP, "shared_target_value": mSQ,

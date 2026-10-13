@@ -1,28 +1,22 @@
-# Raw / derived person-level data must never be committed (patterns repeated in upper case because
-# git matching is case-sensitive when core.ignorecase=false, e.g. on Linux clones)
-*.sav
-*.SAV
-*.Sav
-*.dta
-*.DTA
-*.sas7bdat
-*.SAS7BDAT
-*.xlsx
-*.XLSX
-*.xls
-*.XLS
-*.csv.gz
-*.parquet
-*.PARQUET
-*.por
-*.POR
-*.zip
-*.ZIP
+# Raw / derived person-level data must never be committed. Bracket patterns make the extension match
+# case-insensitive even when core.ignorecase=false (e.g. Linux clones): *.sav, *.SAV, *.Sav, ... are all ignored.
+*.[sS][aA][vV]
+*.[dD][tT][aA]
+*.[sS][aA][sS]7[bB][dD][aA][tT]
+*.[xX][lL][sS][xX]
+*.[xX][lL][sS]
+*.[pP][aA][rR][qQ][uU][eE][tT]
+*.[pP][oO][rR]
+*.[zZ][iI][pP]
+*.[cC][sS][vV].[gG][zZ]
+*.[fF][eE][aA][tT][hH][eE][rR]
+*.[rR][dD][sS]
+*.[rR][dD][aA][tT][aA]
+*.[jJ][oO][bB][lL][iI][bB]
+*.[pP][kK][lL]
 data/
 rtw_cache/
 cache/
-*.joblib
-*.pkl
 # environment
 __pycache__/
 *.pyc
@@ -32,3 +26,4 @@ __pycache__/
 # run outputs (regenerate locally; caches hold row-level predictions)
 rtw_outputs/
 rtw_work/
+joblib_tmp/

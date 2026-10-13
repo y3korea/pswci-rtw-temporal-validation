@@ -85,7 +85,7 @@ def main():
             rows.append(A.quick_eval(res[t]["y_test"], A._ordered(res[t]), t, B_BOOT, DESIGN_LABEL["primary"],
                                      extra={"design": "primary", "primary_in_design": res[t]["primary"]}))
         pd.concat(rows, ignore_index=True).to_csv(T("secondary_designs.csv"), index=False)
-        pd.concat([params_table(r) for r in sec.values()]).to_csv(T("tuning_secondary.csv"), index=False)
+        pd.concat([params_table(r, repeats=1) for r in sec.values()]).to_csv(T("tuning_secondary.csv"), index=False)
         log(f"--- secondary evaluation done ({time.time() - t0:.0f}s)")
     if run("shift"):
         ce = pd.concat([SH.cohort_effects(a, t) for t in TASKS])
@@ -202,6 +202,8 @@ def main():
     if run("extras"):
         A.within_strata(res["P"], a, out)
         A.attrition(a, out)
+        A.weights_design(a, out)                     # round 2: Kish ESS, single-unit strata
+        A.disde_restricted(res, sec, a, out, log=log)  # round 2: restricted-set prevalence decomposition
         log(f"--- extras done ({time.time() - t0:.0f}s)")
     if run("sensitivity"):
         for t in ("A1", "A2", "P"):

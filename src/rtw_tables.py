@@ -77,8 +77,8 @@ def table2(out, models_per_task=None):
         u = T(out, f"perf_C3_{task}_unweighted.csv")
         w = T(out, f"perf_C3_{task}_weighted.csv")
         prim = primary(out, task)
-        base = ["Status", "LR-small"] if task == "P" else ["Null", "LR-small"]
-        models = list(dict.fromkeys(base + ["LR", "RidgeOH", prim]))
+        base = ["Status"] if task == "P" else ["Null"]          # round 2: trimmed (full tables in S5-S7)
+        models = list(dict.fromkeys(base + ["RidgeOH", prim]))
         for m in models:
             gu = u[u.model == m].set_index("metric")
             gw = w[w.model == m].set_index("metric")
@@ -91,7 +91,6 @@ def table2(out, models_per_task=None):
                          "CITL (sample)": ci(*gu.loc["CITL", ["estimate", "lo", "hi"]], d=2),
                          "Slope (sample)": "–" if nul else ci(*gu.loc["Slope", ["estimate", "lo", "hi"]], d=2),
                          "CITL (pop.)": ci(*gw.loc["CITL", ["estimate", "lo", "hi"]], d=2),
-                         "Slope (pop.)": "–" if nul else ci(*gw.loc["Slope", ["estimate", "lo", "hi"]], d=2),
                          "ICI (sample)": "–" if nul else f(gu.loc["ICI", "estimate"])})
     return md(pd.DataFrame(rows))
 
@@ -112,16 +111,14 @@ def table3(out):
                 return r.iloc[0].estimate if len(r) else np.nan
             if len(pv) == 0:
                 continue
-            rows.append({"Task": task, "Design": des.replace(" -> ", " → "), "Model": SHORT[m],
+            rows.append({"Task": task, "Design": des.replace(" -> ", " → "),
                          "Δ prevalence": ci(*pv.loc["total", ["estimate", "lo", "hi"]]),
                          "yx_prev": ci(*pv.loc["YgivenX_shift", ["estimate", "lo", "hi"]]),
                          "CITL in C3": f(cl.loc["total", "target_value"], 2),
-                         "yx_citl": ci(*cl.loc["YgivenX_shift", ["estimate", "lo", "hi"]], d=2),
-                         "Slope: none → IW recal.": f"{f(g('No update', 'Slope'), 2)} → {f(g('IW logistic recalibration', 'Slope'), 2)}",
-                         "CITL: none → IW recal.": f"{f(g('No update', 'CITL'), 2)} → {f(g('IW logistic recalibration', 'CITL'), 2)}"})
-    df = pd.DataFrame(rows)
-    df.columns = ["Task", "Design", "Model", "Δ employment prevalence", "Y|X component (prev.)", "CITL in C3",
-                  "Y|X component (CITL)", "Slope: none → IW", "CITL: none → IW"]
+                         "yx_citl": ci(*cl.loc["YgivenX_shift", ["estimate", "lo", "hi"]], d=2)})
+    df = pd.DataFrame(rows)   # round 2: IW columns moved to Table S17 / Fig. 4a; prevalence rows are model-free
+    df.columns = ["Task", "Design", "Δ employment prevalence (model-free)", "Y\\|X component (prev.)",
+                  f"CITL in C3 ({SHORT[primary(out, 'A2')]})", "Y\\|X component (CITL)"]   # escaped pipe for Markdown
     return md(df)
 
 
@@ -229,6 +226,10 @@ def make_all(out):
     parts["Within strata"] = generic(out, "perf_C3_P_within_strata.csv",
                                      ["stratum", "weighting", "model", "metric", "estimate", "lo", "hi", "n", "employed_w2"])
     parts["Attrition"] = generic(out, "attrition.csv", d=1)
+    parts["Weights design"] = generic(out, "weights_design.csv", d=1)
+    parts["DISDE restricted"] = generic(out, "shift_disde_restricted.csv",
+                                        ["task", "design", "predictors", "model", "metric", "component", "estimate",
+                                         "lo", "hi"], d=4)
     with open(os.path.join(out, "tables_formatted.md"), "w", encoding="utf-8") as fh:
         for k, v in parts.items():
             fh.write(f"## {k}\n\n{v}\n\n")

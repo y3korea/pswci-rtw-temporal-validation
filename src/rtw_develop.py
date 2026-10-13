@@ -89,11 +89,20 @@ def develop(a, task, train_cohorts=(1, 2), test_cohort=3, reduced=False, tag="pr
     return res
 
 
-def params_table(res):
+def params_table(res, repeats=2):
+    """Tuning summary. Round 2 adds the two components of the repeated-CV log-loss: repeat 1 reuses the tuning folds
+    (OOF log-loss), repeat 2 uses independent folds (= 2 x mean - repeat 1 when select_repeats = 2), and flags the
+    model each rule would select (single tuning-CV rule of v1; repeated-CV rule of v2.0; independent repeat only)."""
     rows = []
     for m in res["params"]:
+        rep1 = logloss(res["y_dev"], res["oof"][m])
         rows.append({"task": res["task"], "design": res["tag"], "model": m, "cv_logloss": res["cv_logloss"][m],
-                     "repeated_cv_logloss": res["rep_logloss"][m], "n_candidates": res["n_candidates"][m],
-                     "tune_seconds": round(res["tune_seconds"][m], 1),
+                     "repeated_cv_logloss": res["rep_logloss"][m], "logloss_repeat1_tuning_folds": rep1,
+                     "logloss_repeat2_independent_folds": (2 * res["rep_logloss"][m] - rep1) if repeats == 2 else np.nan,
+                     "n_candidates": res["n_candidates"][m], "tune_seconds": round(res["tune_seconds"][m], 1),
                      "params": json.dumps(res["params"][m], default=str)})
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    for col, flag in (("cv_logloss", "selected_v1_single_cv"), ("repeated_cv_logloss", "selected_v2_repeated_cv"),
+                      ("logloss_repeat2_independent_folds", "selected_independent_repeat")):
+        df[flag] = (df[col] == df[col].min()) if df[col].notna().any() else False
+    return df
