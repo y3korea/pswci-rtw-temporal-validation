@@ -25,7 +25,9 @@ Coding traps handled here (each one was verified against the SPSS value labels):
   * Firm size: cohort 1 has 7 classes, cohorts 2-3 have 8 classes.
   * Rehabilitation-service flags: 1/2 in cohorts 1 and 3, 1/0 in cohort 2.
   * Smoking/drinking: G017/G018 in cohort 2 but G018/G019 in cohort 3 (G016/G017 = sleep).
-  * Commuting injuries exist only from cohort 2 onward (coverage began in 2018).
+  * Cohort 1 'accident' has no commuting category (commuting injuries cannot be identified
+    and are coded 0); cohorts 2-3 code 3 = commuting (C2: pre-2018 employer-controlled
+    commuting only).
   * "Long-lasting disability" block: item 1 = sensory impairment, item 2 = physical-activity
     limitation (walking/stairs/lifting). Use `phys_limitation` for physical limitation.
   * Cohort 1 wave-1 work ability refers to ~90 days after care closure (not the interview date).
