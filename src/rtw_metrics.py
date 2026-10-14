@@ -1,6 +1,7 @@
 """Discrimination, calibration, overall and utility metrics with (design-based) bootstrap CIs (revision v2).
 
-Predictions p are P(employed at wave 2). Sample weights w (survey weights, IPCW, importance weights) are optional.
+Predictions p are P(employed at wave 2). Sample weights w (survey weights, inverse probability of response weights
+(IPRW), importance weights) are optional.
 """
 from __future__ import annotations
 

@@ -1,0 +1,6 @@
+feature,imputation_median,coefficient
+(intercept),,-0.6422957141393288
+employed,1.0,3.2276641080064272
+emp6=new_employer,0.0,-0.6064913805452068
+emp6=self_employed,0.0,1.4027854566082858
+emp6=job_seeking,0.0,1.1475012081800606

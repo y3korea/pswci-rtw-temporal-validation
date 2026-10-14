@@ -1,4 +1,12 @@
-"""Format aggregated CSV outputs as Markdown tables (revision v2) and derive key numbers quoted in the text."""
+"""Format aggregated CSV outputs as Markdown tables (revision v2) and derive key numbers quoted in the text.
+
+Display-layer consistency corrections 2026-10-15 (the CSV files and every value are unchanged): minus signs are U+2212
+as in the text; model, design, decomposition-component and cohort codes are printed with the names used in the
+manuscript; count columns get thousands separators; code-style column names are replaced by readable headers;
+ranges and inequalities in labels use en dashes and typographic signs; "|" in cells is escaped instead of being
+replaced by "/"; the C1 commuting-injury cell of Table S3 is "n/a" (a structural zero: C1 records only work accident
+versus occupational disease); the inverse-probability-of-response-weighting sensitivity row is labelled IPRW.
+"""
 from __future__ import annotations
 
 import os
@@ -13,6 +21,25 @@ SHORT = {"Null": "Null", "Status": "Status-only LR", "LR-small": "Parsimonious L
          "RidgeOH": "Ridge-OH", "RF": "Random forest", "XGB": "XGBoost", "LGBM": "LightGBM", "CatBoost": "CatBoost",
          "EBM": "EBM"}
 ORDER = ["Null", "Status", "LR-small", "LR", "RidgeOH", "RF", "XGB", "LGBM", "CatBoost", "EBM"]
+DESIGN = {"primary": "C1+C2 \u2192 C3 (primary)", "c1to3": "C1 \u2192 C3", "c2to3": "C2 \u2192 C3",
+          "chain12": "C1 \u2192 C2 (chronological)", "loco1": "C2+C3 \u2192 C1 (leave one cohort out)",
+          "loco2": "C1+C3 \u2192 C2 (leave one cohort out)"}
+COMP = {"X_shift_source_side": "X-shift (source)", "YgivenX_shift": "Y|X shift", "X_shift_target_side": "X-shift (target)",
+        "total": "Total change"}
+LABELS = {"Age >=60": "Age \u226560", "Disability grade 1-7": "Disability grade 1\u20137",
+          "Work ability, mean (0-10)": "Work ability, mean (0\u201310)", "<=39": "\u226439", ">=60": "\u226560",
+          "40-49": "40\u201349", "50-59": "50\u201359", "Mild (8-14)": "Mild (8\u201314)",
+          "Severe (1-7)": "Severe (1\u20137)", "Work ability (0-10)": "Work ability (0\u201310)"}
+COUNT_COLS = ["n", "n_dev", "n_test", "events", "events_min_class", "test_events_min", "wave1_n", "wave2_n",
+              "employed_w2", "n_strata", "single_unit_strata", "n_candidates", "reps", "Slope_n_undefined", "n_required",
+              "n_crit1_shrinkage0.9", "n_crit2_optimism", "n_crit3_intercept", "n_source", "n_target", "parameters"]
+ONE_DECIMAL = ["tune_seconds", "missing_C1_%", "missing_C2_%", "missing_C3_%"]
+COLS = {"kish_ess": "Kish ESS", "ess_pct": "ESS (%)", "max_min_weight_ratio": "Max/min weight ratio", "n_strata": "Strata",
+        "single_unit_strata": "Single-unit strata", "R2cs_anticipated": "Anticipated R\u00b2CS",
+        "max_R2cs": "Max R\u00b2CS", "OE": "O/E", "coef_y": "Outcome coefficient", "lrt": "LRT statistic",
+        "max_abs_smd_before": "Max \\|SMD\\| before", "max_abs_smd_after": "Max \\|SMD\\| after",  # headers: escaped
+        "cv_logloss": "CV log-loss (tuning folds)", "repeated_cv_logloss": "Repeated-CV log-loss",
+        "tune_seconds": "Tuning time (s)", "n_candidates": "Candidates"}
 TASKS = ("A1", "A2", "P")
 
 
@@ -27,7 +54,9 @@ def f(x, d=3):
     while float(s) == 0 and x != 0 and d < 6:
         d += 1
         s = f"{x:.{d}f}"
-    return s[1:] if s.startswith("-") and float(s) == 0 else s
+    if s.startswith("-") and float(s) == 0:
+        return s[1:]
+    return "\u2212" + s[1:] if s.startswith("-") else s   # U+2212 minus, as in the text
 
 
 def ci(e, lo, hi, d=3):
@@ -42,7 +71,7 @@ def md(df):
     cols = list(df.columns)
     out = ["| " + " | ".join(cols) + " |", "|" + "|".join(["---"] * len(cols)) + "|"]
     for _, r in df.iterrows():
-        out.append("| " + " | ".join(str(r[c]).replace("|", "/") for c in cols) + " |")
+        out.append("| " + " | ".join(str(r[c]).replace("|", "\\|") for c in cols) + " |")
     return "\n".join(out)
 
 
@@ -56,10 +85,12 @@ def table1(out):
     t = T(out, "table1_characteristics.csv")
     rows = []
     for _, r in t.iterrows():
-        row = {"Characteristic": r.characteristic}
+        row = {"Characteristic": LABELS.get(r.characteristic, r.characteristic)}
         for c in (1, 2, 3):
             u, w = r[f"C{c}_unw"], r.get(f"C{c}_w", np.nan)
-            if r.kind == "n":
+            if c == 1 and r.characteristic == "Commuting injury":
+                row["C1"] = "n/a"   # structural zero: C1 records only work accident vs occupational disease
+            elif r.kind == "n":
                 row[f"C{c}"] = f"{int(u):,}"
             elif r.kind == "pct_only":
                 row[f"C{c}"] = f"{u:.1f}"
@@ -90,7 +121,7 @@ def table2(out, models_per_task=None):
                          "AUROC (population)": "–" if nul else ci(*gw.loc["AUROC", ["estimate", "lo", "hi"]]),
                          "CITL (sample)": ci(*gu.loc["CITL", ["estimate", "lo", "hi"]], d=2),
                          "Slope (sample)": "–" if nul else ci(*gu.loc["Slope", ["estimate", "lo", "hi"]], d=2),
-                         "CITL (pop.)": ci(*gw.loc["CITL", ["estimate", "lo", "hi"]], d=2),
+                         "CITL (population)": ci(*gw.loc["CITL", ["estimate", "lo", "hi"]], d=2),
                          "ICI (sample)": "–" if nul else f(gu.loc["ICI", "estimate"])})
     return md(pd.DataFrame(rows))
 
@@ -146,14 +177,44 @@ def diffs(out, task, lab):
     return md(pd.DataFrame(rows))
 
 
+def _count(x):
+    return "\u2013" if pd.isna(x) else f"{int(round(float(x))):,}"
+
+
 def generic(out, name, cols=None, d=3):
     t = T(out, name)
     if cols:
         t = t[cols]
+    t = t.copy()
+    # display names (2026-10-15); the CSV values used by the manuscript placeholders are unchanged
+    for c in ("model", "reference"):
+        if c in t.columns:
+            t[c] = t[c].map(lambda x: SHORT.get(x, x))
+    if "design" in t.columns:
+        t["design"] = t["design"].map(lambda x: DESIGN.get(x, x))
+    for c in ("design", "analysis"):
+        if c in t.columns:
+            t[c] = t[c].astype(str).str.replace(" -> ", " \u2192 ", regex=False)
+    if "component" in t.columns:
+        t["component"] = t["component"].map(lambda x: COMP.get(x, x))
+    if "cohort" in t.columns and pd.api.types.is_integer_dtype(t["cohort"]):
+        t["cohort"] = t["cohort"].map(lambda x: f"C{x}")
+    for c in ("level", "reference", "label", "characteristic"):
+        if c in t.columns:
+            t[c] = t[c].map(lambda x: LABELS.get(x, x))
+    for c in COUNT_COLS:
+        if c in t.columns and pd.api.types.is_numeric_dtype(t[c]):
+            t[c] = t[c].map(_count)
+    for c in ONE_DECIMAL:
+        if c in t.columns and pd.api.types.is_numeric_dtype(t[c]):
+            t[c] = t[c].map(lambda x: f(x, 1))
     for c in t.columns:
         if pd.api.types.is_float_dtype(t[c]):
             t[c] = t[c].map(lambda x: f(x, d))
-    return md(t)
+    ren = {c: COLS[c] for c in t.columns if c in COLS}
+    ren.update({c: "\u03c1 " + c[4:] for c in t.columns if c.startswith("rho_")})
+    ren.update({c: "\u03c4w " + c[5:] for c in t.columns if c.startswith("wtau_")})
+    return md(t.rename(columns=ren))
 
 
 def key_numbers(out):
@@ -217,7 +278,8 @@ def make_all(out):
     parts["Attribution"] = "\n\n".join(generic(out, f"attribution_{t}.csv") for t in TASKS)
     parts["Attribution stability"] = "\n\n".join(generic(out, f"attribution_stability_{t}.csv") for t in TASKS)
     parts["Sensitivity"] = "\n\n".join(generic(out, f"sensitivity_{t}.csv", ["analysis", "model", "metric", "estimate", "lo", "hi", "n"])
-                                       for t in TASKS)
+                                       for t in TASKS).replace("| IPCW training and evaluation |",
+                                                               "| IPRW, training and evaluation |")
     sd = [n for n in os.listdir(os.path.join(out, "tables")) if n.startswith("seed_variability_")]
     parts["Seed variability"] = "\n\n".join(generic(out, n) for n in sorted(sd))
     parts["Secondary designs"] = generic(out, "secondary_designs.csv",

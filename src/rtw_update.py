@@ -204,8 +204,13 @@ def within_c3_updating(model, params, Xd, yd, Xt, yt, p_base, Xoht, R=50, sizes=
     return pd.DataFrame([row for rep in reps for row in rep])
 
 
-def summarise_updating(long, baseline_label):
-    """Median and 2.5-97.5 percentiles; paired comparisons with the baseline of the same repetition."""
+def summarise_updating(long, baseline_label, tol=1e-10):
+    """Median and 2.5-97.5 percentiles; paired comparisons with the baseline of the same repetition.
+
+    An update counts as better only if it improves the metric by more than `tol` (2026-10-15 correction): when
+    closed testing keeps the model, apply_recal(p, (0, 1)) returns expit(logit(p)), which differs from p only by
+    floating-point noise, and intercept recalibration cannot change the calibration slope; strict '<' comparisons
+    had counted such ties as improvements."""
     base = long[long["method"] == baseline_label].set_index("rep")
     rows = []
     for (meth, n), d in long.groupby(["method", "n"], sort=False):
@@ -222,10 +227,10 @@ def summarise_updating(long, baseline_label):
             row[f"{k}_p97_5"] = v.quantile(0.975)
             row[f"{k}_n_undefined"] = int(v.isna().sum())
             row[f"{k}_median_diff_vs_base"] = (v - b[k].astype(float)).median()
-        row["share_better_absCITL"] = float(np.mean(d["CITL"].abs() < b["CITL"].abs()))
-        row["share_better_slope"] = float(np.mean((d["Slope"] - 1).abs() < (b["Slope"] - 1).abs()))
-        row["share_better_Brier"] = float(np.mean(d["Brier"] < b["Brier"]))
-        row["share_better_ICI"] = float(np.mean(d["ICI"] < b["ICI"]))
+        row["share_better_absCITL"] = float(np.mean(b["CITL"].abs() - d["CITL"].abs() > tol))
+        row["share_better_slope"] = float(np.mean((b["Slope"] - 1).abs() - (d["Slope"] - 1).abs() > tol))
+        row["share_better_Brier"] = float(np.mean(b["Brier"] - d["Brier"] > tol))
+        row["share_better_ICI"] = float(np.mean(b["ICI"] - d["ICI"] > tol))
         row["mean_absCITL"] = float(d["CITL"].abs().mean())
         if "choice" in d:
             ch = d["choice"].dropna()

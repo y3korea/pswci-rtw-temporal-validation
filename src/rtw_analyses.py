@@ -23,14 +23,6 @@ def T(out, name):
     return os.path.join(out, "tables", name)
 
 
-def _suppress(df, k=5):
-    if "n" in df:
-        small = df["n"] < k
-        keep = {"task", "model", "group", "level", "cohort", "n", "weighting", "design", "analysis"}
-        df.loc[small, [c for c in df.columns if c not in keep]] = np.nan
-    return df
-
-
 # =============================================================================================
 # Descriptives and sample size
 # =============================================================================================
@@ -216,7 +208,10 @@ def evaluate_task(res, a, out, B=B_BOOT, log=print):
     hist = []
     for m in (res["primary"], "RidgeOH"):
         h, _ = np.histogram(preds[m], bins=bins)
-        hist.append(pd.DataFrame({"model": m, "bin_lo": bins[:-1], "bin_hi": bins[1:], "count": h}))
+        # 2026-10-15: small-cell suppression (integrity rule: no cell with 1-4 workers in any output table)
+        small = (h > 0) & (h < 5)
+        hist.append(pd.DataFrame({"model": m, "bin_lo": bins[:-1], "bin_hi": bins[1:],
+                                  "count": pd.Series(h).mask(small).astype("Int64"), "suppressed_lt5": small}))
     pd.concat(hist).assign(task=task).to_csv(T(out, f"predhist_{task}.csv"), index=False)
     from sklearn.metrics import roc_curve
     roc = []
@@ -353,6 +348,7 @@ def sensitivity(res, a, out, B=B_BOOT, log=print):
     rows.append(quick_eval(yt, p, task, B, "Survey-weighted training, weighted evaluation", st, te["wt_w2"].values))
     ip = ipcw_weights(a)
     p = {m: refit(m, Xof(m), ip.reindex(dev.index).values) for m in models}
+    # inverse probability of response weighting (IPRW); the CSV label is kept for the manuscript placeholders
     rows.append(quick_eval(yt, p, task, B, "IPCW training and evaluation", st, ip.reindex(te.index).values))
     for lab, drop in (("Restricted predictors (S4)", RESTRICTED_DROP), ("Restricted predictors (S4b)", RESTRICTED_DROP_B),
                       ("Work ability removed", ["work_ability"])):

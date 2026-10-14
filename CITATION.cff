@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this code, please cite the accompanying article."
-title: "Temporal validation, shift diagnosis and recalibration of return-to-work prediction models (PSWCI cohorts 2013-2024): analysis code"
+title: "Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work Prediction Models in Three National Workers' Compensation Cohorts (analysis code)"
 authors:
   - family-names: "Choi"
     given-names: "Wansuk"
@@ -22,7 +22,34 @@ authors:
     given-names: "Myeong-Chul"
     orcid: "https://orcid.org/0009-0006-5063-1355"
     affiliation: "School of Software, Kyungwoon University, Gumi, Republic of Korea"
-version: "0.2.0"
-date-released: "2026-10-13"
+version: "1.0.0"
+date-released: "2026-10-15"
 license: MIT
 repository-code: "https://github.com/y3korea/pswci-rtw-temporal-validation"
+preferred-citation:
+  type: article
+  title: "Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work Prediction Models in Three National Workers' Compensation Cohorts"
+  authors:
+    - family-names: "Choi"
+      given-names: "Wansuk"
+      orcid: "https://orcid.org/0000-0003-1324-6723"
+      affiliation: "Department of Physical Therapy, College of Health Sciences, Kyungwoon University, Gumi, Republic of Korea"
+    - family-names: "Goo"
+      given-names: "Miran"
+      orcid: "https://orcid.org/0000-0002-9625-3357"
+      affiliation: "Department of Physical Therapy, College of Health Sciences, Kyungwoon University, Gumi, Republic of Korea"
+    - family-names: "Park"
+      given-names: "Seoa"
+      orcid: "https://orcid.org/0000-0002-3337-5365"
+      affiliation: "College of Nursing, Kyungwoon University, Gumi, Republic of Korea"
+    - family-names: "Jang"
+      given-names: "Yusung"
+      orcid: "https://orcid.org/0000-0002-9770-3911"
+      affiliation: "Department of Physical Therapy, College of Nursing, Changshin University, Changwon, Republic of Korea"
+    - family-names: "Park"
+      given-names: "Myeong-Chul"
+      orcid: "https://orcid.org/0009-0006-5063-1355"
+      affiliation: "School of Software, Kyungwoon University, Gumi, Republic of Korea"
+  journal: "Journal of The Korea Society of Computer and Information"
+  year: 2026
+  status: in-preparation

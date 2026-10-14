@@ -206,3 +206,38 @@ This plan was written (v1.0, about 18:46 KST) before any outcome model was fitte
 
 ## Software / reproducibility
 Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.10, interpret-core 0.7.8, shap 0.48.0, statsmodels 0.14.6; seed 2026; n_jobs ≤ 4. Reporting follows TRIPOD+AI (2024).
+
+### Amendment v2.3 — 2026-10-15 KST (consistency audit; all results had been seen; no model was refitted and no estimate quoted in the manuscript changed)
+*Appended at the end of the file; Amendments v1.1–v2.2 above are unchanged.*
+* **Correction of improvement shares (Tables S18–S19).** `rtw_update.summarise_updating` now counts an update as
+  better only if it improves the metric by more than 1e-10. Earlier values counted floating-point ties as improvements
+  (closed testing that keeps the model returns expit(logit(p)), which differs from p only by rounding noise, and
+  intercept recalibration cannot change the calibration slope). The repetitions themselves are unchanged; the
+  summaries were recomputed from the saved repetition files (`update_lagged_reps.csv`, `update_withinC3_reps.csv`,
+  read with round-trip float parsing; the previous function reproduced the previous summaries byte for byte), so the
+  result is identical to re-running the `lagged` and `withinc3` stages with the cached models. Only `share_better_*`
+  columns changed (18 lagged rows, 14 within-C3 rows); medians, percentiles, closed-testing choices and the shares
+  quoted in the manuscript are unchanged.
+* **Small-cell suppression.** Prediction-histogram counts of 1–4 workers (`predhist_*.csv`, not used by any table,
+  figure or text) are now suppressed in the code and were suppressed in the saved files (flag `suppressed_lt5`).
+* **Outcome measurement (record; no analysis changed).** The "last week" economic-activity questions refer to the week
+  before the interview in C1 and C2 (wave-2 outcome waves) and in C3 wave 1, but the C3 wave-2 (2024) questionnaire
+  defines "last week" as the week containing 1 August (C3 wave-1 fieldwork: 21 August to 26 November 2023). The
+  job-continuation question refers to the interview date. For C3 re-entry the outcome week can therefore fall less than
+  a year after the wave-1 interview; this measurement change coincides with the validation cohort and is reported as a
+  limitation. The earlier manuscript statement that employment was assessed for the week containing 1 August in all
+  cohorts was wrong.
+* **Missing values (record).** All missing predictor values are questionnaire skips for workers self-employed at injury
+  (workplace union in C2 and C3; firm size for solo self-employed workers in C3); C1 asked both items of all workers.
+  Development-median imputation therefore assigns these C3 workers firm size category 3 (10–29 workers) without an
+  indicator (firm size was never missing in development), and the union missingness indicator marks self-employment in
+  C2 and C3 only.
+* **Commuting injuries (correction of the S6 rationale).** C1 records only work accident versus occupational disease,
+  so commuting injuries cannot be identified in C1 and are coded 0 (a structural zero), rather than "coverage absent in
+  C1"; C2 commuting injuries occurred under the pre-2018 rule (employer-controlled commuting only). Table S3 shows
+  "n/a" for C1.
+* **Labels and display (no change to any value).** The S3 attrition weights are inverse probability of response weights
+  (IPRW; labelled "IPCW" in the code and CSV files). Formatted tables print model, design, component and cohort names
+  as in the manuscript, U+2212 minus signs and thousands separators. Figures: Fig. 1 follows Algorithm 1; Fig. 4a shows
+  CatBoost for the three C3 designs only (the C1 → C2 rows plotted XGBoost without saying so) on a log axis; other
+  figure changes are layout and labels only (see run_log.txt, 2026-10-15).

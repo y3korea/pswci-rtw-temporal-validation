@@ -2,14 +2,14 @@
 
 Analysis code for the manuscript *"Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work
 Prediction Models in Three National Workers' Compensation Cohorts"* (Wansuk Choi, Miran Goo, Seoa Park, Yusung Jang, Myeong-Chul Park (corresponding author); prepared for submission
-to the Journal of the Korea Society of Computer and Information).
+to the Journal of The Korea Society of Computer and Information).
 
 ## Aim
 Models that predict employment one year ahead are developed on injured workers from PSWCI cohorts 1–2 (wave 1 in
 2013 and 2018) and validated, without re-tuning, on cohort 3 (wave 1 in 2023). Two co-primary tasks: job retention
 (A1, workers employed at wave 1) and re-entry (A2, workers not employed at wave 1); the pooled task is secondary and
 benchmarked against a status-only model. Performance is reported in the analysed sample and, with the wave-2
-longitudinal weights, in the insured population. The code reproduces:
+longitudinal weights, in the population from which each cohort was sampled. The code reproduces:
 
 - development and tuning: LR, ridge LR with one-hot ordinal predictors (ridge-OH), random forest, XGBoost, LightGBM,
   CatBoost, explainable boosting machine (EBM), plus null, status-only and parsimonious baselines; primary model by
@@ -24,7 +24,8 @@ longitudinal weights, in the insured population. The code reproduces:
   scaling; evaluated, not proposed), lagged labelled updating (C1 model, C2 update samples,
   C3 evaluation) with closed testing, and a within-C3 design;
 - exploratory fairness audit (TPR/FPR/PPV/NPV, calibration-implied TPR, BH q-values), attribution stability,
-  secondary designs and sensitivity analyses (IPCW, restricted predictors, commuting injuries, work ability, weighted
+  secondary designs and sensitivity analyses (inverse probability of response weighting, restricted predictors,
+  commuting injuries, work ability, weighted
   training, 20 seeds).
 
 The analysis plan, with dated amendments, is in `docs/analysis_plan.md`. It was written before outcome modelling but
@@ -40,7 +41,11 @@ commercial use), no lending or transfer to third parties, citation of the source
 Compensation Insurance, Korea Workers' Compensation & Welfare Service Labor Welfare Research Institute"), and
 notification of resulting theses, papers or presentations to the institute (pswci@comwel.or.kr). Because of the
 no-transfer condition the raw files are not included here; this repository contains no data and no person-level
-outputs. Place the three downloaded cohort folders (as distributed) under one directory, `DATA_ROOT`:
+outputs. Data version used: cohort 1, 5th-wave integrated long file V4 (`PSWCI_5TH_03_LONG_DATA_V4.sav`; V4 release
+of 2018-12-05, which corrected work ability for two respondents); cohort 2, `pswci2_05_long` (2022 release, waves
+1–5); cohort 3, 2024 integrated long file of waves 1–2 (`(4. 통합 데이터_long) 2024 PSWCI_3차 코호트 1-2차년도`);
+downloaded from <https://www.pswci.or.kr/Data/Download.aspx> [download date: authors to confirm].
+Place the three downloaded cohort folders (as distributed) under one directory, `DATA_ROOT`:
 
 ```
 DATA_ROOT/
@@ -61,13 +66,15 @@ export RTW_OUT_DIR="$PWD/rtw_outputs"            # aggregated tables (CSV) and f
 export RTW_CACHE_DIR="$PWD/rtw_cache"            # fitted models / row-level predictions: never share
 export JOBLIB_TEMP_FOLDER="$PWD/joblib_tmp"      # avoids loss of joblib memmaps in system temp folders
 python src/run_all.py                            # about 1 hour on 4 CPU cores (Apple silicon), n_jobs = 4
-python src/export_models.py "$RTW_CACHE_DIR" "$RTW_OUT_DIR/models"   # model files: no person-level data, no per-leaf counts
+python src/export_models.py "$RTW_CACHE_DIR" models   # model files: no person-level data, no per-leaf counts
 ```
+The exported files are committed in `models/` (file-name codes: RidgeOH = ridge-OH, LR-small = parsimonious LR,
+Status = status-only LR).
 `RTW_STAGES` runs a subset of stages (describe, evaluate, secondary, shift, iwrecal, lagged, withinc3, fairness,
-extras, sensitivity, report); development models are cached. `src/pswci_harmonize.py` rebuilds the harmonised long
+attribution, extras, sensitivity, report); development models are cached. `src/pswci_harmonize.py` rebuilds the harmonised long
 file from the raw SPSS files (set `RTW_USE_PARQUET=1` to read a previously built
-`DATA_ROOT/00_derived_data/pswci_harmonized_long.parquet` instead). A Google Colab notebook that embeds the same code
-is provided with the manuscript materials.
+`DATA_ROOT/00_derived_data/pswci_harmonized_long.parquet` instead). `notebooks/rtw_temporal_validation_colab.ipynb`
+embeds the same code for Google Colab (outputs cleared).
 
 ## Code layout
 | File | Content |
@@ -85,8 +92,12 @@ is provided with the manuscript materials.
 | `src/rtw_figures.py`, `src/rtw_tables.py` | figures and formatted tables from the aggregated CSVs |
 | `src/run_all.py` | end-to-end pipeline |
 | `src/export_models.py` | export of fitted model parameters (TRIPOD+AI item 22) |
+| `models/` | exported model files written by `src/export_models.py` (no person-level data, no per-leaf counts) |
+| `notebooks/` | Colab notebook (code identical to `src/`, no outputs) |
+| `docs/analysis_plan.md` | analysis plan with dated amendments |
 
-Small cells (n < 5) are suppressed in subgroup tables.
+No output table contains a cell with 1–4 workers: prediction-histogram counts below 5 are suppressed
+(`predhist_*.csv`), and the smallest subgroup in the fairness audit has n = 85.
 
 ## Licence, citation and AI use
 Code: MIT licence (see `LICENSE`). Please cite the article (see `CITATION.cff`).
