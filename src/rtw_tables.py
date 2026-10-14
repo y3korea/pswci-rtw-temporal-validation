@@ -12,10 +12,17 @@ headers also for the remaining code-style columns of the tuning (Table S2), attr
 S4), subgroup-audit (Table S11) and importance-weighting (Table S16) tables, and the domain-classifier column of the
 DISDE information and importance-weighting tables (Tables S14 and S16) is headed "Domain classifier" with the values
 "Logistic regression" and "LightGBM" instead of the codes LR and LGBM.
+
+Third display pass 2026-10-15 (consistency audit close-out; the CSV files and every value are unchanged): every
+remaining code-style or lowercase column name of the supplementary tables gets a readable header (Tables S1, S2, S7,
+S9, S10, S12-S23), so no table mixes readable and code-style headers; "lo"/"hi" are printed as "Lower"/"Upper"
+(also in the TPR/FPR gap columns of Table S11), single lowercase words are capitalised ("task" -> "Task"), and the
+log-loss column of the full performance tables (Tables S5-S7) is headed "Log-loss".
 """
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 import numpy as np
@@ -76,6 +83,56 @@ COLS.update({  # second display pass (2026-10-15, fix round 2): remaining code-s
     "classifier": "Domain classifier",
     "n_smd_gt_0.1_before": "Predictors with \\|SMD\\| > 0.1 before",   # headers: escaped pipes
     "n_smd_gt_0.1_after": "Predictors with \\|SMD\\| > 0.1 after"})
+COLS.update({  # third display pass (2026-10-15, close-out): all remaining code-style or lowercase headers
+    "lo": "Lower", "hi": "Upper", "reps": "Repetitions", "params": "Selected hyperparameters",
+    "predictors": "Predictor set", "observed": "Observed employment (proportion)",
+    # Tables S1, S7, S12 (predictors, within strata, prevalence, cohort effects)
+    "missing_C1_%": "Missing, C1 (%)", "missing_C2_%": "Missing, C2 (%)", "missing_C3_%": "Missing, C3 (%)",
+    "employed_w2": "Employed at wave 2", "prev": "Prevalence", "prev_weighted": "Prevalence (survey-weighted)",
+    "log_odds": "Log odds ratio",
+    # Table S9 (calibration change) and Table S10 (decision curves)
+    "dev_oof": "Development (OOF)", "nb_model": "Net benefit (model)",
+    "delta_vs_best_default": "\u0394 net benefit vs best default",
+    # Table S14 (DISDE information)
+    "domain_auroc": "Domain AUROC", "ess_source_shared": "ESS, source (shared-support weights)",
+    "ess_target_shared": "ESS, target (shared-support weights)", "n_source": "Source n", "n_target": "Target n",
+    "B": "Bootstrap resamples",
+    # Table S15 (case-mix expected AUROC)
+    "source_observed_auroc": "Observed AUROC, source (OOF)", "source_expected_auroc": "Case-mix expected AUROC, source",
+    "target_observed_auroc": "Observed AUROC, target", "target_expected_auroc": "Case-mix expected AUROC, target",
+    # Table S16 (full importance weighting; primary design, development = C1+C2, target = C3)
+    "cap_pct": "Weight cap (percentile)", "max_w": "Max weight", "prev_dev": "Prevalence, development",
+    "prev_target": "Prevalence, C3",
+    "weighted_CITL": "IW CITL, development (OOF)", "weighted_Slope": "IW slope, development (OOF)",
+    "weighted_AUROC": "IW AUROC, development (OOF)",
+    "target_CITL": "CITL in C3", "target_Slope": "Slope in C3", "target_AUROC": "AUROC in C3",
+    # Table S17 (label-free recalibration): change from no update (|CITL| for CITL, |slope - 1| for the slope)
+    "improvement_vs_none": "Change from no update", "imp_lo": "Change lower", "imp_hi": "Change upper",
+    # Tables S18-S19 (lagged and within-C3 updating; medians and percentiles over repetitions)
+    "AUROC_median": "AUROC (median)", "Brier_median": "Brier (median)", "CITL_median": "CITL (median)",
+    "Slope_median": "Slope (median)", "ICI_median": "ICI (median)",
+    "ICI_p2_5": "ICI (2.5th percentile)", "ICI_p97_5": "ICI (97.5th percentile)",
+    "share_better_ICI": "Share improved, ICI", "share_better_Brier": "Share improved, Brier",
+    "share_better_absCITL": "Share improved, \\|CITL\\|",               # headers: escaped pipes
+    "share_better_slope": "Share improved, \\|slope \u2212 1\\|",
+    "mean_absCITL": "Mean \\|CITL\\|", "Slope_n_undefined": "Slope undefined (repetitions)",
+    "closed_choice_none": "Closed testing chose no update (share)",
+    "closed_choice_intercept": "Closed testing chose intercept (share)",
+    "closed_choice_logistic": "Closed testing chose logistic (share)",
+    # Table S22 (seed variability)
+    "MeanPred": "Mean prediction", "NoSkillAUPRC": "No-skill AUPRC",
+    # Table S23 (attribution: mean |SHAP| importance)
+    "deployed_on_dev": "Importance, deployed model on development",
+    "deployed_on_C3": "Importance, deployed model on C3",
+    "diff_C3_minus_dev": "Difference (C3 \u2212 development)", "diff_lo": "Difference lower",
+    "diff_hi": "Difference upper", "refit_on_C3": "Importance, model refitted on C3",
+    "top10_overlap_refit": "Top-10 overlap, development vs C3 refit", "split_R": "Split-half repetitions"})
+COLS.update({f"gap_{g}_{k}": f"{g} gap {v}" for g in ("TPR", "FPR") for k, v in (("lo", "lower"), ("hi", "upper"))})
+IW_COLS = {"prev_weighted": "IW prevalence, development"}   # Table S16 only (Table S12: survey-weighted prevalence)
+STAB = {"deployed_dev_vs_C3": "deployed model, development vs C3", "dev_vs_C3_refit": "development vs C3 refit",
+        "within_C3": "within C3", "within_dev": "within development",
+        "between": "between development and C3"}               # Table S23 (split-half rank correlations)
+STAB_STAT = {"_median": ", median", "_p2_5": ", 2.5th percentile", "_p97_5": ", 97.5th percentile"}
 DOMAIN_CLF = {"LR": "Logistic regression", "LGBM": "LightGBM"}   # domain-classifier codes (rtw_shift)
 TASKS = ("A1", "A2", "P")
 
@@ -199,7 +256,8 @@ def perf_full(out, task, lab):
         if len(g) == 0:
             continue
         rows.append({"Model": SHORT[m], "Dev AUROC (OOF)": f(dev.loc[m, "AUROC"]) if m in dev.index else "–",
-                     **{k: ci(*g.loc[k, ["estimate", "lo", "hi"]], d=4 if k in ("Brier", "LogLoss") else 3)
+                     **{("Log-loss" if k == "LogLoss" else k):   # readable header (2026-10-15, close-out)
+                        ci(*g.loc[k, ["estimate", "lo", "hi"]], d=4 if k in ("Brier", "LogLoss") else 3)
                         for k in ("AUROC", "AUPRC", "Brier", "LogLoss", "CITL", "Slope", "ICI", "E50", "E90", "ECE")},
                      "No-skill AUPRC": f(g.loc["NoSkillAUPRC", "estimate"]),
                      "Slope undefined (boot)": int(g.loc["Slope", "n_undefined"])})
@@ -214,11 +272,27 @@ def diffs(out, task, lab):
     return md(pd.DataFrame(rows))
 
 
+def _header(c):
+    """Readable column header (display only; the CSV column names are unchanged)."""
+    if c in COLS:
+        return COLS[c]
+    for pre, sym in (("rho_", "\u03c1 "), ("wtau_", "\u03c4w ")):
+        if c.startswith(pre):
+            rest, stat = c[len(pre):], ""
+            for suf, lab in STAB_STAT.items():
+                if rest.endswith(suf):
+                    rest, stat = rest[: -len(suf)], lab
+            return sym + STAB.get(rest, rest) + stat
+    if re.fullmatch(r"[a-z]+", c) and c not in ("n", "p"):
+        return c.capitalize()
+    return c
+
+
 def _count(x):
     return "\u2013" if pd.isna(x) else f"{int(round(float(x))):,}"
 
 
-def generic(out, name, cols=None, d=3):
+def generic(out, name, cols=None, d=3, rename=None):
     t = T(out, name)
     if cols:
         t = t[cols]
@@ -250,10 +324,7 @@ def generic(out, name, cols=None, d=3):
     for c in t.columns:
         if pd.api.types.is_float_dtype(t[c]):
             t[c] = t[c].map(lambda x: f(x, d))
-    ren = {c: COLS[c] for c in t.columns if c in COLS}
-    ren.update({c: "\u03c1 " + c[4:] for c in t.columns if c.startswith("rho_")})
-    ren.update({c: "\u03c4w " + c[5:] for c in t.columns if c.startswith("wtau_")})
-    return md(t.rename(columns=ren))
+    return md(t.rename(columns={c: (rename or {}).get(c, _header(c)) for c in t.columns}))
 
 
 def key_numbers(out):
@@ -293,7 +364,7 @@ def make_all(out):
     parts["DISDE"] = generic(out, "shift_disde.csv", ["task", "design", "model", "metric", "component", "estimate", "lo", "hi"], d=4)
     parts["DISDE info"] = generic(out, "shift_disde_info.csv")
     parts["Case mix"] = generic(out, "shift_casemix.csv")
-    parts["IW sensitivity"] = generic(out, "shift_iw_sensitivity.csv")
+    parts["IW sensitivity"] = generic(out, "shift_iw_sensitivity.csv", rename=IW_COLS)
     parts["IW recalibration"] = generic(out, "update_iw_recalibration.csv",
                                         ["task", "design", "model", "method", "metric", "estimate", "lo", "hi",
                                          "improvement_vs_none", "imp_lo", "imp_hi"], d=4)

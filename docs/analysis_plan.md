@@ -256,3 +256,24 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   LR and LGBM (the CSV files keep the codes).
 * `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only 7 header lines and 33 domain-classifier cells
   changed; `key_numbers.csv` is byte-identical. The manuscript numbers (numbers_trace) are unchanged.
+
+### Second addendum to Amendment v2.3, 2026-10-15 KST (consistency audit close-out; display only; no analysis, CSV file or value changed)
+
+* **Formatted-table headers (third display pass).** `rtw_tables.py` now prints a readable header for every remaining
+  code-style or lowercase column of the supplementary tables, so no table mixes readable and code-style headers:
+  Table S1 (variable, label, encoding, missing % by cohort), S2 (selected hyperparameters), S7 and S12 (employed at
+  wave 2, prevalence, survey-weighted prevalence, log odds ratio), S9 (development OOF value, change), S10 (net benefit
+  of the model, difference from the best default strategy), S13 (predictor set), S14 (domain AUROC, ESS with the
+  shared-support weights, source and target n, bootstrap resamples), S15 (observed and case-mix expected AUROC in
+  source and target), S16 (weight cap percentile, maximum weight, development, IW and C3 prevalences, IW development
+  and C3 CITL/slope/AUROC), S17 (change from no update, with its limits), S18-S19 (medians, ICI 2.5th/97.5th
+  percentiles, shares of repetitions improved, mean |CITL|, undefined slopes, closed-testing choices), S22 (mean
+  prediction, no-skill AUPRC, seed) and S23 (mean |SHAP| importance of the deployed and refitted models, the C3 minus
+  development difference with its limits, and the split-half rank-correlation summaries). "lo"/"hi" are printed as
+  "Lower"/"Upper" (also in the TPR/FPR gap columns of Table S11), single lowercase words are capitalised, and the
+  log-loss column of Tables S5-S7 is headed "Log-loss".
+* The supplement adds one sentence under Table S17 giving the sign convention of "Change from no update" (change in
+  |CITL| for CITL and in |slope - 1| for the slope; negative values are improvements except for AUROC), as computed by
+  `rtw_update.iw_recal_eval` (unchanged code).
+* `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only header lines changed (48 lines; every other
+  line identical); `key_numbers.csv` is byte-identical. The manuscript numbers (numbers_trace) are unchanged.
