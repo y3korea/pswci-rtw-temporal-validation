@@ -6,6 +6,12 @@ manuscript; count columns get thousands separators; code-style column names are 
 ranges and inequalities in labels use en dashes and typographic signs; "|" in cells is escaped instead of being
 replaced by "/"; the C1 commuting-injury cell of Table S3 is "n/a" (a structural zero: C1 records only work accident
 versus occupational disease); the inverse-probability-of-response-weighting sensitivity row is labelled IPRW.
+
+Second display pass 2026-10-15 (consistency audit, fix round 2; the CSV files and every value are unchanged): readable
+headers also for the remaining code-style columns of the tuning (Table S2), attrition (Table S3), sample-size (Table
+S4), subgroup-audit (Table S11) and importance-weighting (Table S16) tables, and the domain-classifier column of the
+DISDE information and importance-weighting tables (Tables S14 and S16) is headed "Domain classifier" with the values
+"Logistic regression" and "LightGBM" instead of the codes LR and LGBM.
 """
 from __future__ import annotations
 
@@ -40,6 +46,37 @@ COLS = {"kish_ess": "Kish ESS", "ess_pct": "ESS (%)", "max_min_weight_ratio": "M
         "max_abs_smd_before": "Max \\|SMD\\| before", "max_abs_smd_after": "Max \\|SMD\\| after",  # headers: escaped
         "cv_logloss": "CV log-loss (tuning folds)", "repeated_cv_logloss": "Repeated-CV log-loss",
         "tune_seconds": "Tuning time (s)", "n_candidates": "Candidates"}
+COLS.update({  # second display pass (2026-10-15, fix round 2): remaining code-style headers
+    # Table S2 (tuning)
+    "logloss_repeat1_tuning_folds": "Log-loss, repeat 1 (tuning folds)",
+    "logloss_repeat2_independent_folds": "Log-loss, repeat 2 (independent folds)",
+    "selected_v1_single_cv": "Chosen by single tuning CV (v1)",
+    "selected_v2_repeated_cv": "Chosen by repeated CV (v2)",
+    "selected_independent_repeat": "Chosen by independent repeat",
+    # Table S3 (attrition)
+    "wave1_n": "Wave-1 n", "wave2_n": "Wave-2 respondents", "response_pct": "Response (%)",
+    "response_pct_employed_w1": "Response, employed at wave 1 (%)",
+    "response_pct_not_employed_w1": "Response, not employed at wave 1 (%)",
+    "missing_wt_w2_among_respondents": "Respondents without wave-2 weight",
+    "missing_outcome_among_respondents": "Respondents without outcome",
+    # Table S4 (sample size; Riley et al. criteria)
+    "n_dev": "Development n", "events_min_class": "Development events (minority class)", "parameters": "Candidate parameters",
+    "n_crit1_shrinkage0.9": "Required n, criterion 1 (shrinkage 0.9)",
+    "n_crit2_optimism": "Required n, criterion 2 (optimism)",
+    "n_crit3_intercept": "Required n, criterion 3 (intercept)", "n_required": "Required n (largest)",
+    "expected_shrinkage_at_n": "Expected shrinkage at development n", "lr_oof_slope": "LR (scores) OOF calibration slope",
+    "n_test": "C3 n", "test_events_min": "C3 events (minority class)",
+    "OE_95CI_lower_factor": "O/E 95% CI lower factor", "OE_95CI_upper_factor": "O/E 95% CI upper factor",
+    # Table S11 (subgroup audit)
+    "TPR_implied": "Calibration-implied TPR",
+    "gap_TPR": "TPR gap", "gap_TPR_lo": "TPR gap lo", "gap_TPR_hi": "TPR gap hi", "gap_TPR_q": "TPR gap q (BH)",
+    "gap_FPR": "FPR gap", "gap_FPR_lo": "FPR gap lo", "gap_FPR_hi": "FPR gap hi", "gap_FPR_q": "FPR gap q (BH)",
+    "gap_AUROC": "AUROC gap", "gap_AUROC_q": "AUROC gap q (BH)",
+    # Tables S14 and S16 (domain classifier, balance)
+    "classifier": "Domain classifier",
+    "n_smd_gt_0.1_before": "Predictors with \\|SMD\\| > 0.1 before",   # headers: escaped pipes
+    "n_smd_gt_0.1_after": "Predictors with \\|SMD\\| > 0.1 after"})
+DOMAIN_CLF = {"LR": "Logistic regression", "LGBM": "LightGBM"}   # domain-classifier codes (rtw_shift)
 TASKS = ("A1", "A2", "P")
 
 
@@ -190,6 +227,8 @@ def generic(out, name, cols=None, d=3):
     for c in ("model", "reference"):
         if c in t.columns:
             t[c] = t[c].map(lambda x: SHORT.get(x, x))
+    if "classifier" in t.columns:   # domain classifier (not a prediction model): spelled out (2026-10-15)
+        t["classifier"] = t["classifier"].map(lambda x: DOMAIN_CLF.get(x, x))
     if "design" in t.columns:
         t["design"] = t["design"].map(lambda x: DESIGN.get(x, x))
     for c in ("design", "analysis"):

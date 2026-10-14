@@ -241,3 +241,18 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   as in the manuscript, U+2212 minus signs and thousands separators. Figures: Fig. 1 follows Algorithm 1; Fig. 4a shows
   CatBoost for the three C3 designs only (the C1 → C2 rows plotted XGBoost without saying so) on a log axis; other
   figure changes are layout and labels only (see run_log.txt, 2026-10-15).
+
+### Addendum to Amendment v2.3 — 2026-10-15 KST (consistency audit, fix round 2; display only; no analysis, CSV file or value changed)
+
+* **Formatted-table headers.** `rtw_tables.py` now prints readable headers for the remaining code-style columns of the
+  tuning table (Table S2: log-loss of each repetition; model chosen by the single tuning-CV rule of v1, the repeated-CV
+  rule of v2.0 and the independent repetition alone), the attrition table (Table S3), the Riley et al. sample-size table
+  (Table S4: development and C3 n and minority-class events, candidate parameters, required n under each criterion,
+  expected shrinkage, LR out-of-fold calibration slope, O/E 95% CI factors), the subgroup audit (Table S11:
+  calibration-implied TPR, TPR/FPR/AUROC gaps with BH q values) and the importance-weighting table (Table S16: number of
+  predictors with |SMD| > 0.1 before and after weighting).
+* **Domain classifier.** The domain-classifier column of the DISDE information table and the importance-weighting table
+  (Tables S14 and S16) is headed "Domain classifier" and shows "Logistic regression" and "LightGBM" instead of the codes
+  LR and LGBM (the CSV files keep the codes).
+* `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only 7 header lines and 33 domain-classifier cells
+  changed; `key_numbers.csv` is byte-identical. The manuscript numbers (numbers_trace) are unchanged.
