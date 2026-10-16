@@ -18,6 +18,11 @@ remaining code-style or lowercase column name of the supplementary tables gets a
 S9, S10, S12-S23), so no table mixes readable and code-style headers; "lo"/"hi" are printed as "Lower"/"Upper"
 (also in the TPR/FPR gap columns of Table S11), single lowercase words are capitalised ("task" -> "Task"), and the
 log-loss column of the full performance tables (Tables S5-S7) is headed "Log-loss".
+
+Fourth display pass 2026-10-17 (second consistency audit; the CSV files and every value are unchanged): metric codes
+in the Metric column of the generic tables are printed as words (LogLoss -> "Log-loss", MeanPred -> "Mean prediction",
+NoSkillAUPRC -> "No-skill AUPRC", Observed -> "Observed proportion"; Supplementary Tables S8, S15, S21 and S22 in
+the numbering of the condensed manuscript).
 """
 from __future__ import annotations
 
@@ -134,6 +139,8 @@ STAB = {"deployed_dev_vs_C3": "deployed model, development vs C3", "dev_vs_C3_re
         "between": "between development and C3"}               # Table S23 (split-half rank correlations)
 STAB_STAT = {"_median": ", median", "_p2_5": ", 2.5th percentile", "_p97_5": ", 97.5th percentile"}
 DOMAIN_CLF = {"LR": "Logistic regression", "LGBM": "LightGBM"}   # domain-classifier codes (rtw_shift)
+METRIC = {"LogLoss": "Log-loss", "MeanPred": "Mean prediction", "NoSkillAUPRC": "No-skill AUPRC",
+          "Observed": "Observed proportion"}   # metric codes printed as words in the Metric column (2026-10-17)
 TASKS = ("A1", "A2", "P")
 
 
@@ -310,6 +317,8 @@ def generic(out, name, cols=None, d=3, rename=None):
             t[c] = t[c].astype(str).str.replace(" -> ", " \u2192 ", regex=False)
     if "component" in t.columns:
         t["component"] = t["component"].map(lambda x: COMP.get(x, x))
+    if "metric" in t.columns:   # display only (2026-10-17); placeholders read the CSV codes
+        t["metric"] = t["metric"].map(lambda x: METRIC.get(x, x))
     if "cohort" in t.columns and pd.api.types.is_integer_dtype(t["cohort"]):
         t["cohort"] = t["cohort"].map(lambda x: f"C{x}")
     for c in ("level", "reference", "label", "characteristic"):

@@ -296,3 +296,25 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   `figS_fairness_A2` (Figs. S6 and S7) and `figS_attribution` (Fig. S8). `fig1_framework` is still drawn but is no
   longer used by the manuscript.
 * No analysis, model, threshold or result changed, and nothing was re-run.
+
+### Clarification of §11 S4, 2026-10-17 KST (second consistency audit; no analysis change, nothing re-run, numbers_changed: none; added by generative AI, Claude Opus 5.5, to be reviewed by the authors)
+
+* In §11 S4, "drinker (unlabelled code in C1)" refers to the SPSS value labels, which cover only codes 1 and 2. The
+  C1 wave-1 item distinguished current, former and never drinkers (questionnaire 문20; code 3 = never drank, 382 of
+  2,000 at wave 1), whereas later C1 waves and C2–C3 ask only whether the respondent drinks; this response-format
+  difference is the comparability reason. The harmonised coding (code 3 -> not a current drinker) and S4 are
+  unchanged.
+
+### Fourth addendum to Amendment v2.3, 2026-10-17 KST (second consistency audit; display only; no analysis, CSV file or value changed; added by generative AI, Claude Opus 5.5, to be reviewed by the authors)
+
+* **Metric labels.** `rtw_tables.generic` now prints the metric codes of the Metric column as words: LogLoss ->
+  "Log-loss", MeanPred -> "Mean prediction", NoSkillAUPRC -> "No-skill AUPRC", Observed -> "Observed proportion"
+  (Supplementary Tables S8, S15, S21 and S22 in the numbering of the condensed manuscript). The CSV files keep the
+  codes, which the manuscript placeholders read.
+* `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only the 888 Metric cells changed (every other line
+  identical); `key_numbers.csv` and every CSV file are byte-identical. The manuscript numbers (numbers_trace) are
+  unchanged. The notebook cell that embeds `rtw_tables.py` was updated to match `src/`.
+* The supplement text was corrected in the same audit without any change to the analysis: the bootstrap preamble now
+  states that the shift-decomposition and label-free-recalibration intervals use simple (unstratified) resamples of
+  the source and target records (as coded in `rtw_shift.disde` and `rtw_update.iw_recal_eval`), and the Supplementary
+  Methods now summarise Amendment v1.2 and the reasons for the S4/S4b predictor drops.

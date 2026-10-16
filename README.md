@@ -42,8 +42,9 @@ Compensation Insurance, Korea Workers' Compensation & Welfare Service Labor Welf
 notification of resulting theses, papers or presentations to the institute (pswci@comwel.or.kr). Because of the
 no-transfer condition the raw files are not included here; this repository contains no data and no person-level
 outputs. Data version used: cohort 1, 5th-wave integrated long file V4 (`PSWCI_5TH_03_LONG_DATA_V4.sav`; V4 release
-of 2018-12-05, which corrected work ability for two respondents); cohort 2, `pswci2_05_long` (2022 release, waves
-1–5); cohort 3, 2024 integrated long file of waves 1–2 (`(4. 통합 데이터_long) 2024 PSWCI_3차 코호트 1-2차년도`);
+of 2018-12-05, which corrected work ability for two respondents); cohort 2, `pswci2_05_long` (5th-wave integrated
+long file, 2022 survey; waves 1–5); cohort 3, 2024 integrated long file of waves 1–2
+(`(4. 통합 데이터_long) 2024 PSWCI_3차 코호트 1-2차년도`);
 downloaded from <https://www.pswci.or.kr/Data/Download.aspx> [download date: authors to confirm].
 Place the three downloaded cohort folders (as distributed) under one directory, `DATA_ROOT`:
 
