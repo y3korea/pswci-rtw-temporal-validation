@@ -9,8 +9,8 @@ Models that predict employment one year ahead are developed on injured workers f
 2013 and 2018) and validated, without re-tuning, on cohort 3 (wave 1 in 2023). Two co-primary tasks: job retention
 (A1, workers employed at wave 1) and re-entry (A2, workers not employed at wave 1); the pooled task is secondary and
 benchmarked against a status-only model. Performance is reported in the analysed sample and, with the wave-2
-survey weights (longitudinal in cohorts 2–3; the single wave-2 weight wt02 in cohort 1; the validation-cohort
-estimates use cohort 3), in the population from which each cohort was sampled. The code reproduces:
+survey weights (longitudinal in cohorts 2–3; the single wave-2 weight wt02 in cohort 1), in the population from
+which each cohort was sampled; temporal-validation estimates use the cohort-3 weights. The code reproduces:
 
 - development and tuning: LR, ridge LR with one-hot ordinal predictors (ridge-OH), random forest, XGBoost, LightGBM,
   CatBoost, explainable boosting machine (EBM), plus null, status-only and parsimonious baselines; primary model by
@@ -103,5 +103,9 @@ No output table contains a cell with 1–4 workers: prediction-histogram counts 
 
 ## Licence, citation and AI use
 Code: MIT licence (see `LICENSE`). Please cite the article (see `CITATION.cff`).
-Generative AI (Anthropic Claude: Opus 5.5, claude-opus-5-5, and Fable 5.1, claude-fable-5-1) proposed the analyses and wrote and ran this code; the authors are
-responsible for reviewing and verifying it. [Authors: update this statement after your own code review.]
+Generative AI (Anthropic Claude: Opus 5.5, claude-opus-5-5, and Fable 5.1, claude-fable-5-1) proposed the research
+questions and analyses, wrote and ran this code (which produced all numerical results), searched and screened the
+literature, conducted an internal pre-submission review with AI-simulated reviewers, carried out internal consistency
+audits of data, code, text and references, whose findings led to corrections, and drafted and condensed the
+manuscript text; the text is under the authors' review before submission, and the authors are responsible for
+reviewing, editing and approving it and for verifying it. [Authors: update this statement after your own code review.]
