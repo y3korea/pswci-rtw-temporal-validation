@@ -55,7 +55,10 @@ def _nfc(s: str) -> str:
 
 def find_file(root: str, must_contain: list[str], ext: str = ".sav") -> str:
     hits = []
-    for dp, _, fns in os.walk(root):
+    for dp, dns, fns in os.walk(root):
+        # 2026-10-17: never descend into the pristine raw-data copy "original(열지말것)" kept next to the working
+        # cohort folders (macOS may store its name in NFD form, hence the NFC comparison).
+        dns[:] = [d for d in dns if not _nfc(d).startswith("original")]
         for fn in fns:
             p = os.path.join(dp, fn)
             q = _nfc(p)
