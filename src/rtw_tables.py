@@ -23,9 +23,15 @@ Fourth display pass 2026-10-17 (second consistency audit; the CSV files and ever
 in the Metric column of the generic tables are printed as words (LogLoss -> "Log-loss", MeanPred -> "Mean prediction",
 NoSkillAUPRC -> "No-skill AUPRC", Observed -> "Observed proportion"; Supplementary Tables S8, S15, S21 and S22 in
 the numbering of the condensed manuscript).
+
+Display pass 2026-10-17 (second consistency sweep; the CSV files and every value are unchanged): the selected
+hyperparameters of the tuning tables (Supplementary Table S3) are printed as "name = value" pairs with three
+significant digits and without the pipeline prefix "clf__"; an empty set (unpenalised LR) is printed as
+"none (unpenalised)". The exact values remain in the CSV files and in the exported models.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -299,6 +305,19 @@ def _count(x):
     return "\u2013" if pd.isna(x) else f"{int(round(float(x))):,}"
 
 
+def _params(s):
+    """Selected hyperparameters as readable "name = value" pairs (display only, 2026-10-17)."""
+    try:
+        d = json.loads(s)
+    except (TypeError, ValueError):
+        return s
+    if not d:
+        return "none (unpenalised)"
+    return ", ".join(f"{k.replace('clf__', '')} = "
+                     + ("unlimited" if v is None else format(v, ".3g") if isinstance(v, float) else str(v))
+                     for k, v in d.items())
+
+
 def generic(out, name, cols=None, d=3, rename=None):
     t = T(out, name)
     if cols:
@@ -333,6 +352,8 @@ def generic(out, name, cols=None, d=3, rename=None):
     for c in t.columns:
         if pd.api.types.is_float_dtype(t[c]):
             t[c] = t[c].map(lambda x: f(x, d))
+    if "params" in t.columns:   # display only (2026-10-17); exact values stay in the CSV files
+        t["params"] = t["params"].map(_params)
     return md(t.rename(columns={c: (rename or {}).get(c, _header(c)) for c in t.columns}))
 
 

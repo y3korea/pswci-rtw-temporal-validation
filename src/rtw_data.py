@@ -27,7 +27,7 @@ def build_analytic(long: pd.DataFrame) -> pd.DataFrame:
     a = a.rename(columns={"wt_long": "wt_long_w1"})
     a["part2"] = w2["participated"].reindex(a.index).fillna(0).astype(int)
     a["y"] = w2["employed"].reindex(a.index)               # employed at wave 2 (emp3 == 1)
-    a["wt_w2"] = w2["wt_long"].reindex(a.index)            # longitudinal weight at wave 2
+    a["wt_w2"] = w2["wt_long"].reindex(a.index)            # wave-2 survey weight (C2/C3: longitudinal wt1; C1: single wave weight = wt02)
     a["hh_size"] = a["hh_size"].clip(upper=6)
     a["sex_grp"] = np.where(a["female"] == 1, "Female", "Male")
     a["age_lab"] = a["age_grp"].map({1: "<=39", 2: "40-49", 3: "50-59", 4: ">=60"})

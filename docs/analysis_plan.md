@@ -318,3 +318,25 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   states that the shift-decomposition and label-free-recalibration intervals use simple (unstratified) resamples of
   the source and target records (as coded in `rtw_shift.disde` and `rtw_update.iw_recal_eval`), and the Supplementary
   Methods now summarise Amendment v1.2 and the reasons for the S4/S4b predictor drops.
+
+### Note on the attribution-stability design, 2026-10-17 KST (second consistency sweep; record only; nothing re-run; numbers_changed: none; added by generative AI, Claude Opus 5.5, to be reviewed by the authors)
+
+* The v2 runs used 30 split-half repetitions in the attribution-stability benchmark (`rtw_analyses.attribution_stability`,
+  default R=30, called without R from `run_all.py`; split_R = 30 in `attribution_stability_{A1,A2,P}.csv`;
+  Supplementary Table S24), not the 50 recorded in Amendment v1.2 item 2 for the v1 run. The v2 benchmark also replaced
+  the v1 §9 bootstrap refits (B = 100/20) by 200 simple row resamples of the deployed-model attribution differences,
+  and the development-versus-C3-refit rank correlation has no interval. Neither change had been recorded in Amendments
+  v2.0–v2.3. The Supplementary Methods ("Provenance and deviations") now state the 30 split halves of the v2 run.
+
+### Fifth addendum to Amendment v2.3, 2026-10-17 KST (second consistency sweep; display only; no analysis, CSV file or value changed; numbers_changed: none; added by generative AI, Claude Opus 5.5, to be reviewed by the authors)
+
+* **Selected hyperparameters.** `rtw_tables.generic` now prints the params column of the tuning tables (Supplementary
+  Table S3) as "name = value" pairs with three significant digits and without the pipeline prefix "clf__" ("unlimited"
+  for an unset value); the empty set of the unpenalised LR (`LogisticRegression(penalty=None)` in `rtw_models.py`) is
+  printed as "none (unpenalised)". The exact values remain in `tuning_primary.csv`, `tuning_secondary.csv` and
+  `models/`.
+* `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only the "Tuning primary" and "Tuning secondary"
+  sections changed (84 table rows); `key_numbers.csv` and every CSV file are byte-identical, and the manuscript
+  numbers (numbers_trace) are unchanged. The notebook cells that embed `rtw_tables.py` and `rtw_data.py` were updated
+  to match `src/` (in `rtw_data.py` only a comment changed: the wave-2 weight is the longitudinal weight wt1 in C2 and
+  C3 and the single wave-2 weight wt02 in C1).
