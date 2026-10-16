@@ -277,3 +277,22 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   `rtw_update.iw_recal_eval` (unchanged code).
 * `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only header lines changed (48 lines; every other
   line identical); `key_numbers.csv` is byte-identical. The manuscript numbers (numbers_trace) are unchanged.
+
+### Third addendum to Amendment v2.3, 2026-10-17 KST (manuscript condensed to the JKSCI page limit; numbering only; no analysis, code, CSV file or value changed)
+
+* The manuscript was condensed on 2026-10-16/17 so that the final JKSCI layout fits eight pages (done with generative
+  AI; author review pending). Results that left the main text were moved to the supplement with their numbers
+  unchanged, and tables and figures were renumbered. The table and figure numbers in Amendment v2.3 and its two addenda
+  above refer to the earlier numbering. Supplementary Tables S1–S23 are now S2–S24 (each +1; for example, the
+  improvement shares of "Tables S18–S19" are in Tables S19–S20, the tuning table "S2" is S3 and the attrition table
+  "S3" is S4). Main Table 1 (prior PSWCI studies) is now Supplementary Table S1, main Table 2 (performance in cohort 3)
+  is Table 1, and main Table 3 (decomposition by source cohort) is the first block of Supplementary Table S15. Main
+  Fig. 1 (protocol drawing) was removed (Algorithm 1 is kept); main Figs. 2, 3 and 4 are Supplementary Figs. S1, S3 and
+  S4; Supplementary Figs. S1, S2–S3, S4 and S5 are now S2, S6–S7, S5 and S8.
+* Code labels are unchanged because the manuscript build uses them: the `rtw_tables.py` sections "Main Table 1"
+  (characteristics; first block of Supplementary Table S4), "Main Table 2" (Table 1) and "Main Table 3" (first block of
+  Supplementary Table S15), and the figure files `fig2_performance` (Fig. S1), `figS_decision_curves` (Fig. S2),
+  `fig3_shift` (Fig. S3), `fig4_updating` (Fig. S4), `figS_withinC3_updating` (Fig. S5), `figS_fairness_A1` and
+  `figS_fairness_A2` (Figs. S6 and S7) and `figS_attribution` (Fig. S8). `fig1_framework` is still drawn but is no
+  longer used by the manuscript.
+* No analysis, model, threshold or result changed, and nothing was re-run.
