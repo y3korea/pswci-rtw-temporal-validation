@@ -28,6 +28,11 @@ Display pass 2026-10-17 (second consistency sweep; the CSV files and every value
 hyperparameters of the tuning tables (Supplementary Table S3) are printed as "name = value" pairs with three
 significant digits and without the pipeline prefix "clf__"; an empty set (unpenalised LR) is printed as
 "none (unpenalised)". The exact values remain in the CSV files and in the exported models.
+
+Display pass 2026-10-17 (coordinating session after the second consistency audit, item vf-04; the CSV files and every
+value are unchanged): the "Observed" column of the seed-variability tables (Supplementary Table S23 in the numbering of
+the condensed manuscript) is headed "Observed proportion", the label the fourth display pass gave to the same quantity
+in the Metric column of the other tables.
 """
 from __future__ import annotations
 
@@ -130,8 +135,9 @@ COLS.update({  # third display pass (2026-10-15, close-out): all remaining code-
     "closed_choice_none": "Closed testing chose no update (share)",
     "closed_choice_intercept": "Closed testing chose intercept (share)",
     "closed_choice_logistic": "Closed testing chose logistic (share)",
-    # Table S22 (seed variability)
+    # Table S22 (seed variability; Supplementary Table S23 after the condensation)
     "MeanPred": "Mean prediction", "NoSkillAUPRC": "No-skill AUPRC",
+    "Observed": "Observed proportion",   # 2026-10-17 (vf-04): same label as the Metric cells (METRIC below)
     # Table S23 (attribution: mean |SHAP| importance)
     "deployed_on_dev": "Importance, deployed model on development",
     "deployed_on_C3": "Importance, deployed model on C3",

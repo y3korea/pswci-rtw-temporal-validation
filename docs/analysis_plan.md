@@ -340,3 +340,14 @@ Python 3.13.6, scikit-learn 1.6.1, xgboost 3.2.0, lightgbm 4.6.0, catboost 1.2.1
   numbers (numbers_trace) are unchanged. The notebook cells that embed `rtw_tables.py` and `rtw_data.py` were updated
   to match `src/` (in `rtw_data.py` only a comment changed: the wave-2 weight is the longitudinal weight wt1 in C2 and
   C3 and the single wave-2 weight wt02 in C1).
+
+### Sixth addendum to Amendment v2.3, 2026-10-17 KST (coordinating session after the second consistency audit, item vf-04; display only; no analysis, CSV file or value changed; numbers_changed: none; added by generative AI, Claude Opus 5.5, to be reviewed by the authors)
+
+* **Seed-variability header.** `rtw_tables.generic` now heads the `Observed` column of the seed-variability tables
+  (Supplementary Table S23 in the numbering of the condensed manuscript) "Observed proportion", the label that the
+  fourth addendum gave to the same quantity in the Metric column of the other tables. The CSV files
+  (`seed_variability_{A1,A2,P}.csv`) keep the column name `Observed`.
+* `tables_formatted.md` was regenerated with `rtw_tables.make_all`; only the three header lines of the "Seed
+  variability" section changed; `key_numbers.csv` and every CSV file are byte-identical, and the manuscript numbers
+  (numbers_trace) are unchanged. The notebook cell that embeds `rtw_tables.py` was updated to match `src/` (both
+  notebook copies regenerated; no outputs).
