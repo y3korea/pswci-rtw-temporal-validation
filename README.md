@@ -46,7 +46,7 @@ outputs. Data version used: cohort 1, 5th-wave integrated long file V4 (`PSWCI_5
 of 2018-12-05, which corrected work ability for two respondents); cohort 2, `pswci2_05_long` (5th-wave integrated
 long file, 2022 survey; waves 1–5); cohort 3, 2024 integrated long file of waves 1–2
 (`(4. 통합 데이터_long) 2024 PSWCI_3차 코호트 1-2차년도`);
-downloaded from <https://www.pswci.or.kr/Data/Download.aspx> [download date: authors to confirm].
+downloaded from <https://www.pswci.or.kr/Data/Download.aspx> on 17 August 2026.
 Place the three downloaded cohort folders (as distributed) under one directory, `DATA_ROOT`:
 
 ```
@@ -78,6 +78,27 @@ file from the raw SPSS files (set `RTW_USE_PARQUET=1` to read a previously built
 `DATA_ROOT/00_derived_data/pswci_harmonized_long.parquet` instead). `notebooks/rtw_temporal_validation_colab.ipynb`
 embeds the same code for Google Colab (outputs cleared).
 
+Revision 1 (journal review, 2026-11-13): `python src/rtw_revision1.py` (same environment variables; set `RTW_N_JOBS=1`
+on machines without multiprocessing) refits CatBoost and the EBM with the saved hyperparameters of
+`tables/tuning_primary.csv` (no re-tuning), checks that the refitted C3 AUROC and CITL equal the values of the main analysis
+(`refit_check.csv`) and writes the paired C3 comparison (`paired_catboost_ebm.csv`, Supplementary Table S28).
+Supplementary Fig. S9 (survey-weighted calibration curves) is drawn from `tables/calcurve_*.csv` by
+`python src/make_fig_s9.py "$RTW_OUT_DIR/tables" figS9.png` (no refitting).
+Main-text Fig. 1 re-plots, at column width, the model-free prevalence rows of `tables/shift_disde.csv` (the rows of
+Supplementary Table S15 and Fig. S3b): `python src/make_main_fig1.py "$RTW_OUT_DIR/tables" fig1.png`.
+
+### Which output produces which table or figure
+| Article item | Aggregate output (in `RTW_OUT_DIR/tables`) |
+|---|---|
+| Table 2, Supplementary Tables S6–S9 | `perf_C3_<task>_unweighted.csv`, `perf_C3_<task>_weighted.csv`, `perf_C3_diffs_*` |
+| Fig. 1, Table S15 | `shift_disde.csv`, `shift_disde_restricted.csv` |
+| Table S3 | `tuning_primary.csv` |
+| Tables S10–S11, Figs. S1–S2 | `calibration_change_*`, `dca_*`, `calcurve_*` |
+| Tables S13–S18 | `shift_*.csv`, `update_iw_recalibration.csv` |
+| Tables S19–S20, Figs. S4–S5 | `update_lagged_*.csv`, `update_withinC3_*.csv` |
+| Tables S21–S24 | `secondary_designs.csv`, `sensitivity_*.csv`, `seed_variability_*.csv`, `attribution_stability_*.csv` |
+| Table S28, Fig. S9 | `revision1/tables/paired_catboost_ebm.csv` and `revision1/tables/refit_check.csv` (under `RTW_OUT_DIR`), `calcurve_*.csv` |
+
 ## Code layout
 | File | Content |
 |---|---|
@@ -94,6 +115,9 @@ embeds the same code for Google Colab (outputs cleared).
 | `src/rtw_figures.py`, `src/rtw_tables.py` | figures and formatted tables from the aggregated CSVs |
 | `src/run_all.py` | end-to-end pipeline |
 | `src/export_models.py` | export of fitted model parameters (TRIPOD+AI item 22) |
+| `src/rtw_revision1.py` | revision 1: paired C3 comparison of CatBoost and the EBM (Table S28) |
+| `src/make_fig_s9.py` | revision 1: survey-weighted calibration curves (Fig. S9) from the saved curve tables |
+| `src/make_main_fig1.py` | main-text Fig. 1 from the model-free prevalence rows of `shift_disde.csv` |
 | `models/` | exported model files written by `src/export_models.py` (no person-level data, no per-leaf counts) |
 | `notebooks/` | Colab notebook (code identical to `src/`, no outputs) |
 | `docs/analysis_plan.md` | analysis plan with dated amendments |
@@ -103,9 +127,11 @@ No output table contains a cell with 1–4 workers: prediction-histogram counts 
 
 ## Licence, citation and AI use
 Code: MIT licence (see `LICENSE`). Please cite the article (see `CITATION.cff`).
-Generative AI (Anthropic Claude: Opus 5.5, claude-opus-5-5, and Fable 5.1, claude-fable-5-1) proposed the research
+Generative AI (Anthropic Claude: Opus 5.5, claude-opus-5-5, and Fable 5.1, claude-fable-5-1; for the final check of
+revision 1, the corrections that followed and the language editing of the revised manuscript also Fable 5.2,
+claude-fable-5-2) proposed the research
 questions and analyses, wrote and ran this code (which produced all numerical results), searched and screened the
 literature, conducted an internal pre-submission review with AI-simulated reviewers, carried out internal consistency
 audits of data, code, text and references, whose findings led to corrections, and drafted and condensed the
-manuscript text; the text is under the authors' review before submission, and the authors are responsible for
-reviewing, editing and approving it and for verifying it. [Authors: update this statement after your own code review.]
+manuscript text; the authors verified the analyses, numbers and references, revised the text and take full
+responsibility for the content.
