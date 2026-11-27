@@ -1,8 +1,8 @@
 # Temporal validation, shift diagnosis and recalibration of return-to-work prediction models (PSWCI, 2013–2024)
 
 Analysis code for the manuscript *"Temporal Validation, Shift Diagnosis and Recalibration of Return-to-Work
-Prediction Models in Three National Workers' Compensation Cohorts"* (Wansuk Choi, Miran Goo, Seoa Park, Yusung Jang, Myeong-Chul Park (corresponding author); prepared for submission
-to the Journal of The Korea Society of Computer and Information).
+Prediction Models in Three National Workers' Compensation Cohorts"* (Wansuk Choi, Miran Goo, Seoa Park, Yusung Jang, Myeong-Chul Park (corresponding author); accepted for publication
+in the Journal of The Korea Society of Computer and Information, Vol. 31, No. 12, December 2026).
 
 ## Aim
 Models that predict employment one year ahead are developed on injured workers from PSWCI cohorts 1–2 (wave 1 in
